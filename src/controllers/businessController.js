@@ -1,49 +1,51 @@
-import Business from "../models/Business.js";
+import { insert, find } from "../utils/dao.js";
+import logger from "../config/logger.js";
 
-export const getAllBusinesses = async (req, res) => {
+export const createBusiness = async (req, res) => {
   try {
-    const businesses = await Business.find().populate("category_id subcategory_id owner_id");
-    res.json(businesses);
+    const {
+      owner_id,
+      name,
+      category_id,
+      subcategory_id,
+      address,
+      city,
+      state,
+      zip_code,
+      phone,
+      email,
+      website,
+      description,
+    } = req.body;
+
+    await insert("businesses", {
+      owner_id,
+      name,
+      category_id,
+      subcategory_id,
+      address,
+      city,
+      state,
+      zip_code,
+      phone,
+      email,
+      website,
+      description,
+    });
+
+    res.status(201).json({ msg: "Business created successfully" });
   } catch (error) {
+    logger.error("Create Business Error", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
 
-export const getBusinessById = async (req, res) => {
+export const getBusinesses = async (req, res) => {
   try {
-    const business = await Business.findById(req.params.id).populate("category_id subcategory_id owner_id");
-    if (!business) return res.status(404).json({ msg: "Business not found" });
-    res.json(business);
+    const businesses = await find("businesses");
+    res.status(200).json(businesses);
   } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const addBusiness = async (req, res) => {
-  try {
-    const { name, category_id, subcategory_id, address, city, state, phone, email, description } = req.body;
-    const business = new Business({ owner_id: req.user.id, name, category_id, subcategory_id, address, city, state, phone, email, description });
-    await business.save();
-    res.json({ msg: "Business added successfully" });
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const updateBusiness = async (req, res) => {
-  try {
-    const updatedBusiness = await Business.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updatedBusiness);
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const deleteBusiness = async (req, res) => {
-  try {
-    await Business.findByIdAndDelete(req.params.id);
-    res.json({ msg: "Business deleted successfully" });
-  } catch (error) {
+    logger.error("Get Businesses Error", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };

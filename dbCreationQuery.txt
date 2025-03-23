@@ -1,0 +1,134 @@
+USE majhi_navi_mumbai;
+
+-- 1. Users Table
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(15),
+    profile_image VARCHAR(255),
+    role ENUM('user', 'business', 'admin', 'sub-admin') DEFAULT 'user',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Categories Table
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Subcategories Table
+CREATE TABLE subcategories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    category_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+-- 4. Businesses Table
+CREATE TABLE businesses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    owner_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category_id INT NOT NULL,
+    subcategory_id INT NOT NULL,
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    zip_code VARCHAR(20),
+    phone VARCHAR(15),
+    email VARCHAR(100),
+    website VARCHAR(255),
+    description TEXT,
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE
+);
+
+-- 5. Business Images Table
+CREATE TABLE business_images (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    business_id INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+-- 6. Filters Table
+CREATE TABLE filters (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    category_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    filter_type ENUM('text', 'boolean', 'range', 'multi-select') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+-- 7. Business Filters Table
+CREATE TABLE business_filters (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    business_id INT NOT NULL,
+    filter_id INT NOT NULL,
+    filter_value VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+    FOREIGN KEY (filter_id) REFERENCES filters(id) ON DELETE CASCADE
+);
+
+-- 8. Reviews Table
+CREATE TABLE reviews (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    business_id INT NOT NULL,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+-- 9. Payments Table
+CREATE TABLE payments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    business_id INT NOT NULL,
+    plan ENUM('normal', 'gold', 'platinum', 'prime') NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    transaction_id VARCHAR(100) UNIQUE NOT NULL,
+    status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+-- 10. Admin Actions Table
+CREATE TABLE admin_actions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL,
+    action VARCHAR(255),
+    target_type ENUM('user', 'business', 'review'),
+    target_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 11. Indexing for Performance Optimization
+ALTER TABLE businesses ADD FULLTEXT INDEX idx_business_name (name);
+CREATE INDEX idx_category ON businesses (category_id);
+CREATE INDEX idx_subcategory ON businesses (subcategory_id);
+CREATE INDEX idx_reviews_business ON reviews (business_id);
+CREATE INDEX idx_reviews_user ON reviews (user_id);
+ALTER TABLE users MODIFY email VARCHAR(100) NULL DEFAULT NULL;
+
+
+CREATE TABLE otp_verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    phone VARCHAR(15) NOT NULL,
+    otp VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

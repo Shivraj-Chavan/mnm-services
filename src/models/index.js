@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize";
-import { config } from "../config/env.js";
+import { config } from "../../config/env.js";
 import User from "./User.js";
 import Category from "./Category.js";
 import Subcategory from "./Subcategory.js";
