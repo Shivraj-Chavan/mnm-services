@@ -1,5 +1,8 @@
 import express from "express";
-// import authRoutes from "./authRoutes.js";
+import authRoutes from "./authRoutes.js";
+import otpRoutes from './otpRoutes.js'
+// import subcategoryRoutes from "./subcategoryRoutes.js";
+
 // import userRoutes from "./userRoutes.js";
 // import categoryRoutes from "./categoryRoutes.js";
 // import businessRoutes from "./businessRoutes.js";
@@ -10,7 +13,10 @@ import express from "express";
 
 const router = express.Router();
 
-// router.use("/auth", authRoutes);
+router.use("/auth", authRoutes);
+router.use("/otp",otpRoutes)
+// router.use("/subcategories", subcategoryRoutes);
+
 // router.use("/users", userRoutes);
 // router.use("/categories", categoryRoutes);
 // router.use("/businesses", businessRoutes);

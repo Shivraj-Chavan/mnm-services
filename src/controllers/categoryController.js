@@ -1,20 +1,40 @@
-import Category from "../models/Category.js";
+import { find, insert, update, remove } from "../utils/dao.js";
 
-export const getAllCategories = async (req, res) => {
+export const getCategories = async (req, res) => {
   try {
-    const categories = await Category.find();
-    res.json(categories);
+    const categories = await find("categories");
+    res.status(200).json(categories);
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
 
-export const addCategory = async (req, res) => {
+export const getCategoryById = async (req, res) => {
   try {
-    const { name } = req.body;
-    const category = new Category({ name });
-    await category.save();
-    res.json({ msg: "Category added successfully" });
+    const category = await find("categories", { id: req.params.id });
+    if (!category.length) return res.status(404).json({ msg: "Category not found" });
+
+    res.status(200).json(category[0]);
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+export const createCategory = async (req, res) => {
+  try {
+    await insert("categories", req.body);
+    res.status(201).json({ msg: "Category created successfully" });
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+export const updateCategory = async (req, res) => {
+  try {
+    const updated = await update("categories", req.body, { id: req.params.id });
+    if (!updated) return res.status(400).json({ msg: "Update failed" });
+
+    res.status(200).json({ msg: "Category updated successfully" });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
@@ -22,8 +42,10 @@ export const addCategory = async (req, res) => {
 
 export const deleteCategory = async (req, res) => {
   try {
-    await Category.findByIdAndDelete(req.params.id);
-    res.json({ msg: "Category deleted successfully" });
+    const deleted = await remove("categories", { id: req.params.id });
+    if (!deleted) return res.status(400).json({ msg: "Delete failed" });
+
+    res.status(200).json({ msg: "Category deleted successfully" });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
