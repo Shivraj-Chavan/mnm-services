@@ -48,6 +48,8 @@ export const verifyOtp = async (req, res) => {
 
     await remove("otp_verifications", { phone });
 
+      
+
     res.status(200).json({ msg: "OTP verified successfully" });
   } catch (error) {
     logger.error("Verify OTP Error", error);
