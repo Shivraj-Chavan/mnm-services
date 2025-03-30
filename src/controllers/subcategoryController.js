@@ -1,51 +1,60 @@
-import { find, insert, update, remove } from "../utils/dao.js";
+import pool from "../config/db.js";
 
-export const getSubcategories = async (req, res) => {
+export const getCategoriesWithSubcategories = async (req, res) => {
   try {
-    const subcategories = await find("subcategories", {}, ["categories"]);
+    const query = `
+      SELECT c.id AS category_id, c.name AS category_name,c.image AS category_image, 
+             s.id AS subcategory_id, s.name AS subcategory_name,s.image AS subcategory_image
+      FROM category c
+      LEFT JOIN subcategory s ON c.id = s.category_id
+      ORDER BY c.id, s.id;
+    `;
+
+    const [rows] = await pool.query(query);
+
+    const categoriesMap = new Map();
+
+    rows.forEach((row) => {
+      if (!categoriesMap.has(row.category_id)) {
+        categoriesMap.set(row.category_id, {
+          id: row.category_id,
+          name: row.category_name,
+          image:row.category_image,
+          subcategories: [],
+        });
+      }
+      if (row.subcategory_id) {
+        categoriesMap.get(row.category_id).subcategories.push({
+          id: row.subcategory_id,
+          name: row.subcategory_name,
+          image: row.subcategory_image,
+        });
+      }
+    });
+
+    const result = Array.from(categoriesMap.values());
+
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+
+export const getSubcategoriesByCategoryId = async (req, res) => {
+  try {
+    const { category_id } = req.params; 
+
+    const query = `
+      SELECT id, name ,image
+      FROM subcategory 
+      WHERE category_id = ? 
+      ORDER BY id;
+    `;
+
+    const [subcategories] = await pool.query(query, [category_id]);
+
     res.status(200).json(subcategories);
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const getSubcategoryById = async (req, res) => {
-  try {
-    const subcategory = await find("subcategories", { id: req.params.id }, ["categories"]);
-    if (!subcategory.length) return res.status(404).json({ msg: "Subcategory not found" });
-
-    res.status(200).json(subcategory[0]);
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const createSubcategory = async (req, res) => {
-  try {
-    await insert("subcategories", req.body);
-    res.status(201).json({ msg: "Subcategory created successfully" });
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const updateSubcategory = async (req, res) => {
-  try {
-    const updated = await update("subcategories", req.body, { id: req.params.id });
-    if (!updated) return res.status(400).json({ msg: "Update failed" });
-
-    res.status(200).json({ msg: "Subcategory updated successfully" });
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
-
-export const deleteSubcategory = async (req, res) => {
-  try {
-    const deleted = await remove("subcategories", { id: req.params.id });
-    if (!deleted) return res.status(400).json({ msg: "Delete failed" });
-
-    res.status(200).json({ msg: "Subcategory deleted successfully" });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
