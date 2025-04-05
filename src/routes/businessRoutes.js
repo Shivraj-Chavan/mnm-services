@@ -1,6 +1,5 @@
 import express from "express";
 import { 
-  getBusinesses, 
   getBusinessById, 
   createBusiness, 
   updateBusiness, 
@@ -9,7 +8,6 @@ import {
 
 const router = express.Router();
 
-router.get("/", getBusinesses);
 router.get("/:id", getBusinessById);
 router.post("/", createBusiness);
 router.put("/:id", updateBusiness);
