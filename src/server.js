@@ -12,7 +12,7 @@ app.use("/api", routes);
 const swaggerFile = JSON.parse(fs.readFileSync("./src/swagger.json", "utf8"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
-app.listen(config.PORT, () => {
+app.listen(config.PORT,'0.0.0.0', () => {
   logger.info(` Server running on port  http://localhost:${config.PORT}`);
   console.log(`Swagger Docs available at http://localhost:${config.PORT}/api-docs`);
 
