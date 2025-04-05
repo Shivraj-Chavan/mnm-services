@@ -1,9 +1,52 @@
-import { find, insert, update, remove } from "../utils/dao.js";
+import pool from "../config/db.js";
 
-export const getBusinesses = async (req, res) => {
+export const createBusiness = async (req, res) => {
   try {
-    const businesses = await find("businesses", {}, ["categories", "subcategories"]);
-    res.status(200).json(businesses);
+    const {
+      owner_id,
+      name,
+      category_id,
+      subcategory_id,
+      pin_code,
+      address,
+      landmark,
+      sector,
+      area,
+      phone,
+      wp_number,
+      email,
+      website,
+      timing,
+    } = req.body;
+
+    const values = [
+      owner_id ?? null,
+      name ?? null,
+      category_id ?? null,
+      subcategory_id ?? null,
+      pin_code ?? null,
+      address ?? null,
+      landmark ?? null,
+      sector ?? null,
+      area ?? null,
+      phone ?? null,
+      wp_number ?? null,
+      email ?? null,
+      website ?? null,
+      JSON.stringify(timing ?? []), // Assuming timing is an object or array
+    ];
+
+    const query = `
+      INSERT INTO businesses (
+        owner_id, name, category_id, subcategory_id, 
+        pin_code, address, landmark, sector, area, 
+        phone, wp_number, email, website, timing
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await pool.query(query, values);
+
+    res.status(201).json({ msg: "Business created successfully", id: result.insertId });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
@@ -11,28 +54,83 @@ export const getBusinesses = async (req, res) => {
 
 export const getBusinessById = async (req, res) => {
   try {
-    const business = await find("businesses", { id: req.params.id }, ["categories", "subcategories"]);
-    if (!business.length) return res.status(404).json({ msg: "Business not found" });
+    const { id } = req.params;
 
-    res.status(200).json(business[0]);
+    const [rows] = await pool.execute(
+      "SELECT * FROM businesses WHERE id = ?",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ msg: "Business not found" });
+    }
+
+    res.status(200).json(rows[0]);
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
 
-export const createBusiness = async (req, res) => {
-  try {
-    await insert("businesses", req.body);
-    res.status(201).json({ msg: "Business created successfully" });
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
 
 export const updateBusiness = async (req, res) => {
   try {
-    const updated = await update("businesses", req.body, { id: req.params.id });
-    if (!updated) return res.status(400).json({ msg: "Update failed" });
+    const { id } = req.params;
+    const {
+      owner_id,
+      name,
+      category_id,
+      subcategory_id,
+      pincode,
+      address,
+      landmark,
+      sector,
+      area,
+      phone,
+      wp_number,
+      email,
+      website,
+      timings, // JSON object
+    } = req.body;
+
+    const [result] = await pool.execute(
+      `UPDATE businesses SET 
+        owner_id = ?, 
+        name = ?, 
+        category_id = ?, 
+        subcategory_id = ?, 
+        pincode = ?, 
+        address = ?, 
+        landmark = ?, 
+        sector = ?, 
+        area = ?, 
+        phone = ?, 
+        wp_number = ?, 
+        email = ?, 
+        website = ?, 
+        timings = ?
+      WHERE id = ?`,
+      [
+        owner_id,
+        name,
+        category_id,
+        subcategory_id,
+        pincode,
+        address,
+        landmark,
+        sector,
+        area,
+        phone,
+        wp_number,
+        email,
+        website,
+        JSON.stringify(timings),
+        id,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ msg: "Business not found or nothing to update" });
+    }
 
     res.status(200).json({ msg: "Business updated successfully" });
   } catch (error) {
@@ -40,10 +138,19 @@ export const updateBusiness = async (req, res) => {
   }
 };
 
+
 export const deleteBusiness = async (req, res) => {
   try {
-    const deleted = await remove("businesses", { id: req.params.id });
-    if (!deleted) return res.status(400).json({ msg: "Delete failed" });
+    const { id } = req.params;
+
+    const [result] = await pool.execute(
+      "DELETE FROM businesses WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ msg: "Business not found" });
+    }
 
     res.status(200).json({ msg: "Business deleted successfully" });
   } catch (error) {

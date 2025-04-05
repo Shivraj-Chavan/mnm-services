@@ -5,7 +5,7 @@ import categoryRoutes from "./categoryRoutes.js";
 import subcategoryRoutes from "./subcategoryRoutes.js";
 
 // import userRoutes from "./userRoutes.js";
-// import businessRoutes from "./businessRoutes.js";
+import businessRoutes from "./businessRoutes.js";
 // import reviewRoutes from "./reviewRoutes.js";
 // import filterRoutes from "./filterRoutes.js";
 // import paymentRoutes from "./paymentRoutes.js";
@@ -19,7 +19,7 @@ router.use("/otp",otpRoutes)
 // router.use("/users", userRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/subcategories", subcategoryRoutes);
-// router.use("/businesses", businessRoutes);
+router.use("/businesses", businessRoutes);
 // router.use("/reviews", reviewRoutes);
 // router.use("/filters", filterRoutes);
 // router.use("/payments", paymentRoutes);
