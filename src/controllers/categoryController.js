@@ -6,7 +6,7 @@ const generateSlug = (name) =>
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
-    .replace(/\s+/g, '_');
+    .replace(/\s+/g, '-');
     
 export const getCategories = async (req, res) => {
   try {
