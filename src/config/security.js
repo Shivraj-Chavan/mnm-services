@@ -11,10 +11,16 @@ export const securityMiddlewares = (app) => {
   app.use(hpp());   
   app.use(expressMongoSanitize());  
   
+  // app.use(
+  //   cors({
+  //     origin: config.ALLOWED_ORIGINS.split(","),    
+  //     credentials: true,
+  //   })
+  // );
   app.use(
     cors({
-      origin: config.ALLOWED_ORIGINS.split(","),    
-      credentials: true,
+      origin: '*', // Allows all origins
+      credentials: false, // Should be false if you're using '*' as origin
     })
   );
 };
