@@ -7,9 +7,9 @@ const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
 
 export const sendOTP = async (req, res) => {
   try {
-    let { name, phone } = req.body;
-    if (!name || !phone) {
-      return res.status(400).json({ msg: "Name and Phone are required" });
+    let { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ msg: "Phone is required" });
     }
 
     phone = normalizePhone(phone); 
@@ -53,7 +53,7 @@ export const sendOTP = async (req, res) => {
       conn.release();
     }
 
-    return res.status(200).json({ msg: "OTP sent successfully" });
+    return res.status(200).json({ msg: "OTP sent successfully" ,otp});
   } catch (error) {
     console.error("Error sending OTP:", error);
     return res.status(500).json({ msg: "Server error", error: error.message });
@@ -71,8 +71,8 @@ export const sendOTP = async (req, res) => {
 
 export const verifyOTP = async (req, res) => {
   try {
-    const { name, phone, otp } = req.body;
-    if (!phone || !otp) {
+    const { name,phone, otp } = req.body;
+    if (!name || !phone || !otp) {
       return res.status(400).json({ msg: "Phone and OTP are required" });
     }
 
