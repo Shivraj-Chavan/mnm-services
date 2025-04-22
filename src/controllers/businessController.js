@@ -157,3 +157,35 @@ export const deleteBusiness = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
+export const getBusinesses = async (req, res) => {
+  try {
+    const { category_id, subcategory_id } = req.query;
+
+    let query = `SELECT * FROM businesses`;
+    const conditions = [];
+    const values = [];
+
+    if (category_id) {
+      conditions.push("category_id = ?");
+      values.push(category_id);
+    }
+
+    if (subcategory_id) {
+      conditions.push("subcategory_id = ?");
+      values.push(subcategory_id);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(" AND ")}`;
+      query += ` ORDER BY RAND()`;
+    } else {
+      query += ` ORDER BY id DESC`; 
+    }
+
+    const [rows] = await pool.execute(query, values);
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
