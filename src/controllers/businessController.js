@@ -2,8 +2,9 @@ import pool from "../config/db.js";
 
 export const createBusiness = async (req, res) => {
   try {
+    const userId = req.user.id; 
     const {
-      owner_id,
+      owner_id=userId,
       name,
       category_id,
       subcategory_id,
@@ -33,7 +34,7 @@ export const createBusiness = async (req, res) => {
       wp_number ?? null,
       email ?? null,
       website ?? null,
-      JSON.stringify(timing ?? []), // Assuming timing is an object or array
+      JSON.stringify(timing ?? []),
     ];
 
     const query = `
