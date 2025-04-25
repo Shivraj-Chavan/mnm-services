@@ -158,35 +158,85 @@ export const deleteBusiness = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
-
 export const getBusinesses = async (req, res) => {
   try {
-    const { category_id, subcategory_id } = req.query;
+    let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.body;
 
-    let query = `SELECT * FROM businesses`;
-    const conditions = [];
-    const values = [];
+    page = Math.max(1, parseInt(page)); 
+    limit = Math.max(1, parseInt(limit)); 
 
-    if (category_id) {
-      conditions.push("category_id = ?");
-      values.push(category_id);
+    const offset = (page - 1) * limit;
+
+    console.log('Page:', page);
+    console.log('Limit:', limit);
+    console.log('Offset:', offset);
+
+    let query = `SELECT * FROM businesses WHERE is_verified = ?`;
+    let values = [isVerified === 'false' ? 0 : 1];
+
+    if (categoryslug) {
+      query += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;
+      values.push(categoryslug);
     }
 
-    if (subcategory_id) {
-      conditions.push("subcategory_id = ?");
-      values.push(subcategory_id);
+    if (subcategoryslug) {
+      query += ` AND subcategory_id IN (SELECT id FROM subcategory WHERE slug = ?)`;
+      values.push(subcategoryslug);
     }
 
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(" AND ")}`;
-      query += ` ORDER BY RAND()`;
-    } else {
-      query += ` ORDER BY id DESC`; 
+    if (name) {
+      query += ` AND name LIKE ?`;
+      values.push(`%${name}%`);
     }
+
+    if (location) {
+      query += ` AND (address LIKE ? OR landmark LIKE ? OR sector LIKE ? OR area LIKE ?)`;
+      values.push(`%${location}%`, `%${location}%`, `%${location}%`, `%${location}%`);
+    }
+
+    query += ` LIMIT ${limit} OFFSET ${offset}`;
+
+    console.log('Final Query for SELECT:', query);
+    console.log('Final Values for SELECT:', values);
 
     const [rows] = await pool.execute(query, values);
-    res.status(200).json(rows);
+
+    let countQuery = `SELECT COUNT(*) AS total FROM businesses WHERE is_verified = ?`;
+    let countValues = [isVerified === 'false' ? 0 : 1];
+
+    if (categoryslug) {
+      countQuery += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;
+      countValues.push(categoryslug);
+    }
+
+    if (subcategoryslug) {
+      countQuery += ` AND subcategory_id IN (SELECT id FROM subcategory WHERE slug = ?)`;
+      countValues.push(subcategoryslug);
+    }
+
+    if (name) {
+      countQuery += ` AND name LIKE ?`;
+      countValues.push(`%${name}%`);
+    }
+
+    if (location) {
+      countQuery += ` AND (address LIKE ? OR landmark LIKE ? OR sector LIKE ? OR area LIKE ?)`;
+      countValues.push(`%${location}%`, `%${location}%`, `%${location}%`, `%${location}%`);
+    }
+
+    const [[countResult]] = await pool.execute(countQuery, countValues);
+    const total = countResult.total;
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: totalPages,
+      data: rows
+    });
   } catch (error) {
+    console.error('Error:', error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };

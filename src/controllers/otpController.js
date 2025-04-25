@@ -99,19 +99,13 @@ export const sendOTP = async (req, res) => {
 
 
 
-
-
-
-
-
 export const verifyOTP = async (req, res) => {
   try {
-    const { name,phone, otp } = req.body;
-    if (!name || !phone || !otp) {
+    const { phone, otp } = req.body;
+    if ( !phone || !otp) {
       return res.status(400).json({ msg: "Phone and OTP are required" });
     }
 
-    // Check if OTP is valid and not expired
     const [[otpRecord]] = await pool.query(
       `SELECT * FROM otp_verifications 
        WHERE phone = ? 
@@ -139,8 +133,8 @@ export const verifyOTP = async (req, res) => {
         role = existingUser.role; 
       } else {
         const [result] = await conn.query(
-          `INSERT INTO users (phone, name, role) VALUES (?, ?, 'user')`,
-          [phone, name]
+          `INSERT INTO users (phone, role) VALUES (?, 'user')`,
+          [phone]
         );
         userId = result.insertId;
         role = "user"; 
@@ -149,7 +143,7 @@ export const verifyOTP = async (req, res) => {
       await conn.commit();
       conn.release();
 
-      const token = jwt.sign({ userId, phone, role }, 'JWT_SECRET', { expiresIn: "7d" });
+      const token = jwt.sign({ userId, phone, role }, 'JWT_SECRET', { expiresIn: "15d" });
 
       return res.status(200).json({ msg: "OTP verified successfully", role, token });
     } catch (err) {
