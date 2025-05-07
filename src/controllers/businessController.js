@@ -53,17 +53,38 @@ export const createBusiness = async (req, res) => {
   }
 };
 
+// export const getBusinessById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const [rows] = await pool.execute(
+//       "SELECT * FROM businesses WHERE id = ?",
+//       [id]
+//     );
+
+//     if (rows.length === 0) {
+//       return res.status(404).json({ msg: "Business not found" });
+//     }
+
+//     res.status(200).json(rows[0]);
+//   } catch (error) {
+//     res.status(500).json({ msg: "Server error", error: error.message });
+//   }
+// };
+
 export const getBusinessById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [rows] = await pool.execute(
-      "SELECT * FROM businesses WHERE id = ?",
-      [id]
-    );
+    // Join with users to check owner status
+    const [rows] = await pool.execute(`
+      SELECT b.* FROM businesses b
+      JOIN users u ON b.owner_id = u.id
+      WHERE b.id = ? AND u.is_active = 1
+    `, [id]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ msg: "Business not found" });
+      return res.status(404).json({ msg: "Business not found or owner is inactive" });
     }
 
     res.status(200).json(rows[0]);
@@ -158,9 +179,10 @@ export const deleteBusiness = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
 export const getBusinesses = async (req, res) => {
   try {
-    let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.body;
+    let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.query;
 
     page = Math.max(1, parseInt(page)); 
     limit = Math.max(1, parseInt(limit)); 

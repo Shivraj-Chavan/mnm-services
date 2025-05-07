@@ -6,7 +6,7 @@ const doc = {
     description: "API documentation for Justdial Clone",
     version: "1.0.0",
   },
-  host: "localhost:5000",
+  host: "localhost:5005",
   schemes: ["http"], 
   basePath: "/api",
   consumes: ["application/json"],
