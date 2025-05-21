@@ -1,4 +1,29 @@
+import slugify from "slugify";
 import pool from "../config/db.js";
+
+export const getUniqueSlug = async (name, area, excludeId = null) => {
+  let baseSlug = slugify(`${name}-${area}`, { lower: true, strict: true });
+  let uniqueSlug = baseSlug;
+  let count = 1;
+
+  let query = "SELECT slug FROM businesses WHERE slug = ?";
+  let params = [uniqueSlug];
+
+  if (excludeId) {
+    query += " AND id != ?";
+    params.push(excludeId);
+  }
+
+  let [existing] = await pool.query(query, params);
+
+  while (existing.length > 0) {
+    uniqueSlug = `${baseSlug}-${count++}`;
+    params[0] = uniqueSlug;
+    [existing] = await pool.query(query, params);
+  }
+
+  return uniqueSlug;
+};
 
 export const createBusiness = async (req, res) => {
   try {
@@ -19,7 +44,7 @@ export const createBusiness = async (req, res) => {
       website,
       timing,
     } = req.body;
-
+    const slug = await getUniqueSlug(name, area);
     const values = [
       owner_id ?? null,
       name ?? null,
@@ -35,14 +60,15 @@ export const createBusiness = async (req, res) => {
       email ?? null,
       website ?? null,
       JSON.stringify(timing ?? []),
+      slug,
     ];
 
     const query = `
       INSERT INTO businesses (
         owner_id, name, category_id, subcategory_id, 
         pin_code, address, landmark, sector, area, 
-        phone, wp_number, email, website, timing
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        phone, wp_number, email, website, timing ,slug
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `;
 
     const [result] = await pool.query(query, values);
@@ -93,26 +119,28 @@ export const getBusinessById = async (req, res) => {
   }
 };
 
-
 export const updateBusiness = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      owner_id,
-      name,
-      category_id,
-      subcategory_id,
-      pincode,
-      address,
-      landmark,
-      sector,
-      area,
-      phone,
-      wp_number,
-      email,
-      website,
-      timings, // JSON object
+      owner_id = null,
+      name = null,
+      category_id = null,
+      subcategory_id = null,
+      pin_code = null,
+      address = null,
+      landmark = null,
+      sector = null,
+      area = null,
+      phone = null,
+      wp_number = null,
+      email = null,
+      website = null,
+      timings = [],
+      is_verified = false,
     } = req.body;
+    
+    const slug = await getUniqueSlug(name, area, id);
 
     const [result] = await pool.execute(
       `UPDATE businesses SET 
@@ -120,7 +148,7 @@ export const updateBusiness = async (req, res) => {
         name = ?, 
         category_id = ?, 
         subcategory_id = ?, 
-        pincode = ?, 
+        pin_code = ?, 
         address = ?, 
         landmark = ?, 
         sector = ?, 
@@ -129,14 +157,16 @@ export const updateBusiness = async (req, res) => {
         wp_number = ?, 
         email = ?, 
         website = ?, 
-        timings = ?
-      WHERE id = ?`,
+        timing = ?, 
+        slug = ?,
+        is_verified = ?
+        WHERE id = ?`,
       [
         owner_id,
         name,
         category_id,
         subcategory_id,
-        pincode,
+        pin_code,
         address,
         landmark,
         sector,
@@ -146,6 +176,8 @@ export const updateBusiness = async (req, res) => {
         email,
         website,
         JSON.stringify(timings),
+        slug,
+        is_verified,
         id,
       ]
     );
@@ -154,7 +186,24 @@ export const updateBusiness = async (req, res) => {
       return res.status(404).json({ msg: "Business not found or nothing to update" });
     }
 
-    res.status(200).json({ msg: "Business updated successfully" });
+     // Get updated business
+     const [updatedBusinessRows] = await pool.execute(
+      `SELECT * FROM businesses WHERE id = ?`,
+      [id]
+    );
+    const updatedBusiness = updatedBusinessRows[0];
+
+    // const [pendingBusinesses] = await pool.execute(`SELECT * FROM businesses WHERE is_verified = 0`);
+    // const [verifiedBusinesses] = await pool.execute(`SELECT * FROM businesses WHERE is_verified = 1`);
+
+    // res.status(200).json({msg: "Business updated successfully",
+    //   updatedBusiness,
+    //   slug,
+    //   verifiedBusinesses,
+    //   pendingBusinesses,
+    // });
+
+    res.status(200).json({ msg: "Business updated successfully", slug });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
@@ -164,6 +213,10 @@ export const updateBusiness = async (req, res) => {
 export const deleteBusiness = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ msg: "Invalid business ID" });
+    }
 
     const [result] = await pool.execute(
       "DELETE FROM businesses WHERE id = ?",
@@ -175,6 +228,25 @@ export const deleteBusiness = async (req, res) => {
     }
 
     res.status(200).json({ msg: "Business deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+export const getBusinessBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const [rows] = await pool.query(
+      "SELECT * FROM businesses WHERE slug = ? AND is_Verified = 1",
+      [slug]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ msg: "Verified business not found" });
+    }
+
+    res.status(200).json({ business: rows[0] });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
@@ -193,8 +265,9 @@ export const getBusinesses = async (req, res) => {
     console.log('Limit:', limit);
     console.log('Offset:', offset);
 
+    let isVerifiedValue = (isVerified === 'false' || isVerified === 0 || isVerified === '0') ? 0 : 1;
     let query = `SELECT * FROM businesses WHERE is_verified = ?`;
-    let values = [isVerified === 'false' ? 0 : 1];
+    let values = [isVerifiedValue];
 
     if (categoryslug) {
       query += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;

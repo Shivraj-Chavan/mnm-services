@@ -5,19 +5,22 @@ import jwt from 'jsonwebtoken'
 
 const sendViaMSG91 = async (phone, otp) => {
   const authKey ="445149AajTjz3MQMW67e6f150P1";
-  const templateId ="680a7d3dd6fc0515b90813b2";
+  const templateId ="681ba508d6fc0540f506a0c4";
   const senderId = "THNKFD";
 
   // const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${phone}&authkey=${authKey}&otp=${otp}&sender=${senderId}`;
+  // const url = `https://control.msg91.com/api/v5/otp?template_id=680a7d3dd6fc0515b90813b2&authkey=${authKey}&mobile=91${phone}&otp=${otp}&sender=THNKFD`;
+  // const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${phone}&authkey=${authKey}&otp=${otp}&sender=${senderId}`;
 
-  const url = `https://control.msg91.com/api/v5/flow`;
+  const url = 'https://control.msg91.com/api/v5/flow';
   const params = {
-    "template_id": templateId,
-    "short_url":"0",
-    "recipients":[
+    template_id: templateId,
+    short_url:"0",  
+    mobiles: `91${phone}`,
+    recipients:[
       {
-       "mobiles": `91${phone}`,
-       "otp": otp,
+        mobiles: `91${phone}`,
+        otp: otp,
      } 
     ]
   };
