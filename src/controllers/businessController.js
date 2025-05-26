@@ -29,7 +29,7 @@ export const createBusiness = async (req, res) => {
   try {
     const userId = req.user.id; 
     const {
-      owner_id=userId,
+      owner_id: providedOwnerId,
       name,
       category_id,
       subcategory_id,
@@ -44,6 +44,7 @@ export const createBusiness = async (req, res) => {
       website,
       timing,
     } = req.body;
+    const owner_id = providedOwnerId || userId;
     const slug = await getUniqueSlug(name, area);
     const values = [
       owner_id ?? null,
@@ -193,22 +194,11 @@ export const updateBusiness = async (req, res) => {
     );
     const updatedBusiness = updatedBusinessRows[0];
 
-    // const [pendingBusinesses] = await pool.execute(`SELECT * FROM businesses WHERE is_verified = 0`);
-    // const [verifiedBusinesses] = await pool.execute(`SELECT * FROM businesses WHERE is_verified = 1`);
-
-    // res.status(200).json({msg: "Business updated successfully",
-    //   updatedBusiness,
-    //   slug,
-    //   verifiedBusinesses,
-    //   pendingBusinesses,
-    // });
-
     res.status(200).json({ msg: "Business updated successfully", slug });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
-
 
 export const deleteBusiness = async (req, res) => {
   try {
@@ -332,6 +322,54 @@ export const getBusinesses = async (req, res) => {
     });
   } catch (error) {
     console.error('Error:', error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+// upload img for business
+export const uploadPhotosForBusiness = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const { user_id, images, created_at } = req.body;
+
+    if (!Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ msg: "No images provided" });
+    }
+
+    const uploadDir = path.join("uploads", "business_photos");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const savedImageUrls = [];
+
+    for (let base64String of images) {
+      const match = base64String.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!match) continue;
+
+      const ext = match[1].split("/")[1];
+      const buffer = Buffer.from(match[2], "base64");
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+      const filePath = path.join(uploadDir, fileName);
+
+      fs.writeFileSync(filePath, buffer);
+      const imageUrl = `/uploads/business_photos/${fileName}`;
+
+      // Save to DB
+      await pool.query(
+        "INSERT INTO business_photos (user_id, business_id, image_url, created_at) VALUES (?, ?, ?, NOW())",
+        [user_id, businessId, imageUrl, created_at]
+      );
+
+      savedImageUrls.push(imageUrl);
+    }
+
+    res.status(201).json({
+      msg: "Photos uploaded successfully",
+      images: savedImageUrls,
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };

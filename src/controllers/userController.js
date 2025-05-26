@@ -108,7 +108,6 @@ export const blockUser = (req, res) => {
 };
 
 
-
 // export const deleteUser = async (req, res) => {
 //   try {
 //     const user = await User.findByPk(req.params.id);

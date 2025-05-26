@@ -19,12 +19,10 @@ const decodeDataAndReturnUserData = async (req) => {
     }
 
     const { userId } = decoded;
-
     const [[user]] = await pool.query(
       `SELECT id, phone, role FROM users WHERE id = ? LIMIT 1`,
       [userId]
     );
-
     if (!user) {
       throw new Error("User not found");
     }

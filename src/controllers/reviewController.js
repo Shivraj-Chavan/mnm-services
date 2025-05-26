@@ -50,69 +50,95 @@
 //   }
 // }
 
+import pool from "../config/db.js";
 
-// dummy data
-let reviews = [
-  {
-    _id: '1',
-    user_id: '123',
-    business_id: 'a123',
-    rating: 4,
-    comment: 'Great service!',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    _id: '2',
-    user_id: '123',
-    business_id: 'b456',
-    rating: 5,
-    comment: 'Excellent experience!',
-    createdAt: new Date().toISOString(),
-  },
-];
+// Add review
+export const createReview = async (req, res) => {
+  try {
+    console.log('Request Body:', req.body);
 
-// GET /:business_id — get all reviews for a business
-export const getReviews = (req, res) => {
-  const { business_id } = req.params;
-  console.log('Fetching reviews for business:', business_id);
-  const businessReviews = reviews.filter(r => r.business_id === business_id);
-  res.status(200).json(businessReviews);
-};
+    const user_id = req.user?.id;
+    const { business_id, rating, comment } = req.body;
 
-// POST / — add a review
-export const addReview = (req, res) => {
-  const { user_id, business_id, rating, comment } = req.body;
-  console.log('Received Review:', { user_id, business_id, rating, comment });
-                                        
-  const newReview = {
-    _id: Date.now().toString(),
-    user_id,
-    business_id,
-    rating,
-    comment,
-    createdAt: new Date().toISOString(),
-  };
+    if (!user_id || !business_id) {
+      return res.status(400).json({ msg: "Missing user_id or business_id" });
+    }
 
-  reviews.push(newReview);
+    const created_at = new Date();
+    const values = [user_id, business_id, rating, comment, created_at];
 
-  res.status(201).json({
-    msg: 'Review added successfully',
-    review: newReview,
-  });
-};
+    const query = `
+      INSERT INTO reviews (
+        user_id, business_id, rating, comment, created_at
+      ) VALUES (?, ?, ?, ?, ?);
+    `;
 
-// DELETE /:id — delete a review by id
-export const deleteReview = (req, res) => {
-  const { id } = req.params;
-  console.log('Deleting review with id:', id);
+    console.log('Insert query:', query);
+    console.log('Values:', values);
 
-  const initialLength = reviews.length;
-  reviews = reviews.filter(r => r._id !== id);
+    const [result] = await pool.query(query, values);
 
-  if (reviews.length === initialLength) {
-    return res.status(404).json({ msg: 'Review not found' });
+    res.status(201).json({
+      msg: 'Review added successfully',
+      review: {
+        id: result.insertId,
+        user_id,
+        business_id,
+        rating,
+        comment,
+        created_at,
+      },
+    });
+  } catch (error) {
+    console.error('Create Review Error:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
   }
-
-  res.status(200).json({ msg: 'Review deleted ' });
 };
+
+
+// Get all reviews for a business
+export const getReviews = async (req, res) => {
+  try {
+    const { business_id } = req.params;
+
+    if (!business_id) {
+      return res.status(400).json({ msg: "business_id is required" });
+    }
+    console.log('Received business_id param:', business_id)
+
+    const query = `SELECT * FROM reviews WHERE business_id = ? ORDER BY created_at DESC `;
+
+    const [reviews] = await pool.query(query, [business_id]);
+    console.log('Reviews fetched:', reviews);
+    res.status(200).json(reviews);
+  } catch (error) {
+    console.error('Get Reviews Error:', error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+// Delete review by id
+export const deleteReview = async (req, res) => {
+  try {
+    const { review_id } = req.params;
+
+    if (!review_id) {
+      return res.status(400).json({ msg: 'Missing review review_id' });
+    }
+
+    const query = `DELETE FROM reviews WHERE id = ?`;
+    const [result] = await pool.query(query, [review_id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ msg: 'Review not found' });
+    }
+
+    res.status(200).json({ msg: 'Review deleted' });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+
 
