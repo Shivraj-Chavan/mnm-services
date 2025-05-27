@@ -244,6 +244,8 @@ export const getBusinessBySlug = async (req, res) => {
 
 export const getBusinesses = async (req, res) => {
   try {
+    console.log('Logged in user:', req.user);
+    const userId = req.user.id;
     let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.query;
 
     page = Math.max(1, parseInt(page)); 
@@ -257,7 +259,7 @@ export const getBusinesses = async (req, res) => {
 
     let isVerifiedValue = (isVerified === 'false' || isVerified === 0 || isVerified === '0') ? 0 : 1;
     let query = `SELECT * FROM businesses WHERE is_verified = ?`;
-    let values = [isVerifiedValue];
+    let values = [userId, isVerifiedValue];
 
     if (categoryslug) {
       query += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;
@@ -373,3 +375,28 @@ export const uploadPhotosForBusiness = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
+// Business By UserId
+export const getBusinessByUserId = async (req, res) => {
+  try {
+    const  userId = req.user.id;
+
+   
+
+    // Get businesses owned by this user
+    const [businessRows] = await pool.query(
+      "SELECT * FROM businesses WHERE owner_id = ?",
+      [userId]
+    );
+
+    if (businessRows.length === 0) {
+      return res.status(404).json({ msg: "No businesses found for this user" });
+    }
+
+    res.status(200).json({ businesses: businessRows });
+  } catch (error) {
+    console.error("Error fetching businesses by user ID:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+

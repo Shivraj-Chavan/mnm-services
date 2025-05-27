@@ -95,6 +95,17 @@ export const createReview = async (req, res) => {
   }
 };
 
+// GET all reviews without filtering
+export const getAllReviews = async (req, res) => {
+  try {
+    const query = `SELECT * FROM reviews ORDER BY created_at DESC`;
+    const [reviews] = await pool.query(query);
+    res.status(200).json(reviews);
+  } catch (error) {
+    console.error('Get All Reviews Error:', error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
 
 // Get all reviews for a business
 export const getReviews = async (req, res) => {
@@ -117,13 +128,34 @@ export const getReviews = async (req, res) => {
   }
 };
 
+// GET all reviews posted by a specific user (My Reviews)
+// export const getReviewsByUser = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     if (!userId) {
+//       return res.status(400).json({ msg: "userId is required" });
+//     }
+
+//     // Use user_id (underscore) for column name consistency
+//     const query = `SELECT * FROM reviews WHERE user_id = ? ORDER BY created_at DESC`;
+//     const [reviews] = await pool.query(query, [userId]);
+
+//     res.status(200).json(reviews);
+//   } catch (error) {
+//     console.error('Get User Reviews Error:', error);
+//     res.status(500).json({ msg: "Server error", error: error.message });
+//   }
+// };
+
 // Delete review by id
 export const deleteReview = async (req, res) => {
   try {
     const { review_id } = req.params;
 
-    if (!review_id) {
-      return res.status(400).json({ msg: 'Missing review review_id' });
+    const deletedReview = await Review.findByIdAndDelete(review_id);
+    if (!deletedReview) {
+      return res.status(404).json({ msg: "Review not found" });
     }
 
     const query = `DELETE FROM reviews WHERE id = ?`;
