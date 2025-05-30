@@ -226,6 +226,7 @@ export const deleteBusiness = async (req, res) => {
 export const getBusinessBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
+    console.log('Received request for business with slug:', slug);
 
     const [rows] = await pool.query(
       "SELECT * FROM businesses WHERE slug = ? AND is_Verified = 1",
@@ -245,8 +246,8 @@ export const getBusinessBySlug = async (req, res) => {
 export const getBusinesses = async (req, res) => {
   try {
     console.log('Logged in user:', req.user);
-    const userId = req.user.id;
     let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.query;
+    console.log('Raw query:', { categoryslug, subcategoryslug, name, location, page, limit, isVerified });
 
     page = Math.max(1, parseInt(page)); 
     limit = Math.max(1, parseInt(limit)); 
@@ -259,16 +260,18 @@ export const getBusinesses = async (req, res) => {
 
     let isVerifiedValue = (isVerified === 'false' || isVerified === 0 || isVerified === '0') ? 0 : 1;
     let query = `SELECT * FROM businesses WHERE is_verified = ?`;
-    let values = [userId, isVerifiedValue];
+    let values = [isVerifiedValue];
 
     if (categoryslug) {
       query += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;
       values.push(categoryslug);
+      console.log(' categoryslug:', categoryslug);
     }
 
     if (subcategoryslug) {
       query += ` AND subcategory_id IN (SELECT id FROM subcategory WHERE slug = ?)`;
       values.push(subcategoryslug);
+      console.log(' subcategoryslug:', subcategoryslug);
     }
 
     if (name) {
@@ -294,11 +297,13 @@ export const getBusinesses = async (req, res) => {
     if (categoryslug) {
       countQuery += ` AND category_id IN (SELECT id FROM category WHERE slug = ?)`;
       countValues.push(categoryslug);
+      console.log('categoryslug id:',categoryslug);
     }
 
     if (subcategoryslug) {
       countQuery += ` AND subcategory_id IN (SELECT id FROM subcategory WHERE slug = ?)`;
       countValues.push(subcategoryslug);
+      console.log('subcategoryslug id:',subcategoryslug);
     }
 
     if (name) {
@@ -332,35 +337,21 @@ export const getBusinesses = async (req, res) => {
 export const uploadPhotosForBusiness = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const { user_id, images, created_at } = req.body;
+    const files = req.files;
 
-    if (!Array.isArray(images) || images.length === 0) {
-      return res.status(400).json({ msg: "No images provided" });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ msg: "No files uploaded" });
     }
-
-    const uploadDir = path.join("uploads", "business_photos");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    console.log('Uploaded files:', req.files);
 
     const savedImageUrls = [];
 
-    for (let base64String of images) {
-      const match = base64String.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!match) continue;
+    for (let file of files) {
+      const imageUrl = `/uploads/${file.filename}`;
 
-      const ext = match[1].split("/")[1];
-      const buffer = Buffer.from(match[2], "base64");
-      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
-      const filePath = path.join(uploadDir, fileName);
-
-      fs.writeFileSync(filePath, buffer);
-      const imageUrl = `/uploads/business_photos/${fileName}`;
-
-      // Save to DB
       await pool.query(
-        "INSERT INTO business_photos (user_id, business_id, image_url, created_at) VALUES (?, ?, ?, NOW())",
-        [user_id, businessId, imageUrl, created_at]
+        "INSERT INTO business_images (business_id, image_url, created_at) VALUES (?, ?, NOW())",
+        [businessId, imageUrl]
       );
 
       savedImageUrls.push(imageUrl);
@@ -370,9 +361,9 @@ export const uploadPhotosForBusiness = async (req, res) => {
       msg: "Photos uploaded successfully",
       images: savedImageUrls,
     });
-  } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
 
@@ -380,14 +371,14 @@ export const uploadPhotosForBusiness = async (req, res) => {
 export const getBusinessByUserId = async (req, res) => {
   try {
     const  userId = req.user.id;
-
-   
+    console.log("Fetching businesses for userId:", userId);
 
     // Get businesses owned by this user
     const [businessRows] = await pool.query(
       "SELECT * FROM businesses WHERE owner_id = ?",
       [userId]
     );
+    console.log("Businesses fetched:", businessRows);
 
     if (businessRows.length === 0) {
       return res.status(404).json({ msg: "No businesses found for this user" });

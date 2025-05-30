@@ -152,11 +152,7 @@ export const getReviews = async (req, res) => {
 export const deleteReview = async (req, res) => {
   try {
     const { review_id } = req.params;
-
-    const deletedReview = await Review.findByIdAndDelete(review_id);
-    if (!deletedReview) {
-      return res.status(404).json({ msg: "Review not found" });
-    }
+    console.log('Attempting to delete review with id:', review_id);
 
     const query = `DELETE FROM reviews WHERE id = ?`;
     const [result] = await pool.query(query, [review_id]);
