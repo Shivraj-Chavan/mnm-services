@@ -5,7 +5,7 @@ import { validateUser } from "../middlewares/auth.js";
 const router = express.Router();
 
 router.get("/:business_id", getReviews);
-router.get('/',getAllReviews)
+router.get('/',validateUser,getAllReviews)
 // router.get("/:userId", getReviewsByUser);
 router.post("/",validateUser, createReview);
 router.delete("/:review_id", deleteReview);

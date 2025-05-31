@@ -98,14 +98,28 @@ export const createReview = async (req, res) => {
 // GET all reviews without filtering
 export const getAllReviews = async (req, res) => {
   try {
-    const query = `SELECT * FROM reviews ORDER BY created_at DESC`;
-    const [reviews] = await pool.query(query);
+    const userId = req.user.id;
+    const query = `
+      SELECT 
+        r.id AS review_id,
+        r.comment,
+        r.rating,
+        r.business_id,
+        b.name,
+        r.created_at
+      FROM reviews r
+      JOIN businesses b ON r.business_id = b.id
+      WHERE r.user_id = ?
+      ORDER BY r.created_at DESC
+    `;
+    const [reviews] = await pool.query(query, [userId]);
     res.status(200).json(reviews);
   } catch (error) {
     console.error('Get All Reviews Error:', error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
 
 // Get all reviews for a business
 export const getReviews = async (req, res) => {

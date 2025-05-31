@@ -92,7 +92,7 @@ export const getMyProfile = async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const [rows] = await pool.query("SELECT id, name, email, phone, website, profileImage, created_at FROM users WHERE id = ?", [userId]);
+    const [rows] = await pool.query("SELECT id, name, email, phone, profile_image, created_at FROM users WHERE id = ?", [userId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "User not found" });

@@ -368,26 +368,38 @@ export const uploadPhotosForBusiness = async (req, res) => {
 };
 
 // Business By UserId
-export const getBusinessByUserId = async (req, res) => {
+export const getBusinessByUserId = async (req, res) => { 
   try {
-    const  userId = req.user.id;
+    const userId = req.user.id;
     console.log("Fetching businesses for userId:", userId);
 
-    // Get businesses owned by this user
-    const [businessRows] = await pool.query(
-      "SELECT * FROM businesses WHERE owner_id = ?",
-      [userId]
-    );
-    console.log("Businesses fetched:", businessRows);
+    const query = `
+      SELECT 
+        b.*, 
+        GROUP_CONCAT(i.image_url) AS images 
+      FROM businesses b
+      LEFT JOIN business_images i ON b.id = i.business_id
+      WHERE b.owner_id = ?
+      GROUP BY b.id
+    `;
 
-    if (businessRows.length === 0) {
+    const [businessRows] = await pool.query(query, [userId]);
+
+    // Parse comma-separated image URLs into arrays
+    const businesses = businessRows.map(b => ({
+      ...b,
+      images: b.images ? b.images.split(',') : []
+    }));
+
+    if (businesses.length === 0) {
       return res.status(404).json({ msg: "No businesses found for this user" });
     }
 
-    res.status(200).json({ businesses: businessRows });
+    res.status(200).json({ businesses });
   } catch (error) {
     console.error("Error fetching businesses by user ID:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
 
