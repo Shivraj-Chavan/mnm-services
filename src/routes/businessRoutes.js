@@ -7,7 +7,8 @@ import {
   getBusinesses,
   getBusinessBySlug,
   uploadPhotosForBusiness,
-  getBusinessByUserId
+  getBusinessByUserId,
+  deleteImages
 } from "../controllers/businessController.js";
 import { validateUser } from "../middlewares/auth.js";
 import {upload} from "../middlewares/upload.js";
@@ -21,5 +22,6 @@ router.post("/",validateUser, createBusiness);
 router.put("/:id",validateUser, updateBusiness);
 router.delete("/:id",validateUser,deleteBusiness);
 router.post("/:businessId/photos",upload.array("photos", 20), uploadPhotosForBusiness);
+router.delete('/:id/photos',deleteImages);
 
 export default router;

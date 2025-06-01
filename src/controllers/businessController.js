@@ -1,5 +1,9 @@
 import slugify from "slugify";
 import pool from "../config/db.js";
+import path from "path";
+import fs from 'fs/promises'; 
+import { fileURLToPath } from 'url';
+import db from '../config/db.js';
 
 export const getUniqueSlug = async (name, area, excludeId = null) => {
   let baseSlug = slugify(`${name}-${area}`, { lower: true, strict: true });
@@ -368,32 +372,42 @@ export const uploadPhotosForBusiness = async (req, res) => {
 };
 
 // Business By UserId
-export const getBusinessByUserId = async (req, res) => { 
+export const getBusinessByUserId = async (req, res) => {
   try {
     const userId = req.user.id;
     console.log("Fetching businesses for userId:", userId);
 
-    const query = `
-      SELECT 
-        b.*, 
-        GROUP_CONCAT(i.image_url) AS images 
-      FROM businesses b
-      LEFT JOIN business_images i ON b.id = i.business_id
-      WHERE b.owner_id = ?
-      GROUP BY b.id
-    `;
+    const [businessRows] = await pool.query(
+      "SELECT * FROM businesses WHERE owner_id = ?",
+      [userId]
+    );
 
-    const [businessRows] = await pool.query(query, [userId]);
-
-    // Parse comma-separated image URLs into arrays
-    const businesses = businessRows.map(b => ({
-      ...b,
-      images: b.images ? b.images.split(',') : []
-    }));
-
-    if (businesses.length === 0) {
+    if (businessRows.length === 0) {
       return res.status(404).json({ msg: "No businesses found for this user" });
     }
+
+    const businessIds = businessRows.map(b => b.id);
+
+    const [imageRows] = await pool.query(
+      "SELECT id, image_url, business_id FROM business_images WHERE business_id IN (?)",
+      [businessIds]
+    );
+
+    const imagesMap = {};
+    imageRows.forEach(img => {
+      if (!imagesMap[img.business_id]) {
+        imagesMap[img.business_id] = [];
+      }
+      imagesMap[img.business_id].push({
+        id: img.id,
+        url: img.image_url,
+      });
+    });
+
+    const businesses = businessRows.map(b => ({
+      ...b,
+      images: imagesMap[b.id] || []
+    }));
 
     res.status(200).json({ businesses });
   } catch (error) {
@@ -403,3 +417,44 @@ export const getBusinessByUserId = async (req, res) => {
 };
 
 
+// Delete images
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const deleteImages = async (req, res) => {
+  try {
+    const businessId = req.params.id;
+    const { photoUrl } = req.body;
+
+    if (!photoUrl) {
+      return res.status(400).json({ error: "photoUrl is required" });
+    }
+
+    const fileName = path.basename(photoUrl);
+    const filePath = path.join(__dirname, "../../uploads/business_photos", fileName);
+
+    // Ensure file exists before deleting
+    await fs.access(filePath);
+    await fs.unlink(filePath); 
+    console.log("Deleted file:", filePath);
+
+    const [rows] = await pool.query("SELECT images FROM businesses WHERE id = ?", [businessId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Business not found" });
+    }
+
+    const images = JSON.parse(rows[0].images || "[]");
+    const updatedImages = images.filter((img) => img !== fileName);
+
+    await pool.query("UPDATE businesses SET images = ? WHERE id = ?", [
+        JSON.stringify(updatedImages),
+        businessId,
+      ]);
+
+    res.json({ message: "Photo deleted successfully" });
+  } catch (err) {
+    console.error("Server Error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
