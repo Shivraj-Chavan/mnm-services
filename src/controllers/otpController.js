@@ -3,41 +3,69 @@ import pool from "../config/db.js";
 import crypto from "crypto";
 import jwt from 'jsonwebtoken'
 
-const sendViaMSG91 = async (phone, otp) => {
-  const authKey ="445149AajTjz3MQMW67e6f150P1";
-  const templateId ="681ba508d6fc0540f506a0c4";
-  const senderId = "THNKFD";
+// const sendViaMSG91 = async (phone, otp) => {
+  
 
   // const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${phone}&authkey=${authKey}&otp=${otp}&sender=${senderId}`;
   // const url = `https://control.msg91.com/api/v5/otp?template_id=680a7d3dd6fc0515b90813b2&authkey=${authKey}&mobile=91${phone}&otp=${otp}&sender=THNKFD`;
   // const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${phone}&authkey=${authKey}&otp=${otp}&sender=${senderId}`;
 
+//   const url = 'https://control.msg91.com/api/v5/flow';
+//   const params = {
+//     template_id: templateId,
+//     short_url:"0",  
+//     mobiles: `91${phone}`,
+//     recipients:[
+//       {
+//         mobiles: `91${phone}`,
+//         otp: otp,
+//      } 
+//     ]
+//   };
+
+//   try {
+//     const response = await axios.post(url,  params ,{
+//       headers:{
+//         authkey: authKey,
+//            'Content-Type': 'application/json',
+//            'Accept': 'application/json'
+//       }
+//     });
+//     console.log('OTP sent successfully:', response.data);
+//   } catch (error) {
+//     console.error('Error sending OTP:', error.response.data);
+//   }
+// };
+
+const sendViaMSG91 = async (phone, otp) => {
   const url = 'https://control.msg91.com/api/v5/flow';
   const params = {
-    template_id: templateId,
-    short_url:"0",  
+    template_id: process.env.templateId,
+    short_url: "0",
     mobiles: `91${phone}`,
-    recipients:[
+    recipients: [
       {
         mobiles: `91${phone}`,
         otp: otp,
-     } 
+      }
     ]
   };
 
   try {
-    const response = await axios.post(url,  params ,{
-      headers:{
-        authkey: authKey,
-           'Content-Type': 'application/json',
+    const response = await axios.post(url, params, {
+      headers: {
+        authkey: process.env.authKey,
+        'Content-Type': 'application/json',
         'Accept': 'application/json'
       }
     });
     console.log('OTP sent successfully:', response.data);
   } catch (error) {
-    console.error('Error sending OTP:', error.response.data);
+    console.error('Error sending OTP:', error.response?.data || error.message);
+    throw new Error("Failed to send OTP");
   }
 };
+
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
 const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
@@ -71,8 +99,10 @@ export const sendOTP = async (req, res) => {
     }
 
     const otp = generateOTP();
+    console.log(`Generated OTP for ${phone}: ${otp}`);
     const response=await sendViaMSG91(phone, otp);
     console.log({response})
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -91,17 +121,13 @@ export const sendOTP = async (req, res) => {
       conn.release();
     }
 
-    return res.status(200).json({ msg: "OTP sent successfully" ,otp});
+    return res.status(200).json({ msg: "OTP sent successfully",otp});
   } catch (error) {
     console.error("Error sending OTP:", error);
     return res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
  
-
-
-
-
 export const verifyOTP = async (req, res) => {
   try {
     const { phone, otp } = req.body;

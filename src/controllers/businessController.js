@@ -241,8 +241,21 @@ export const getBusinessBySlug = async (req, res) => {
       return res.status(404).json({ msg: "Verified business not found" });
     }
 
-    res.status(200).json({ business: rows[0] });
+    const business = rows[0];
+
+    const [imageRows] = await pool.query(
+      "SELECT id, image_url FROM business_images WHERE business_id = ?",
+      [business.id]
+    );
+
+    const images = imageRows.map(img => ({
+      id: img.id,
+      url: img.image_url
+    }));
+
+    res.status(200).json({ business: { ...business, images } });
   } catch (error) {
+    console.error("Error fetching business by slug:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
@@ -377,6 +390,7 @@ export const getBusinessByUserId = async (req, res) => {
     const userId = req.user.id;
     console.log("Fetching businesses for userId:", userId);
 
+    // Step 1: Get all businesses by user
     const [businessRows] = await pool.query(
       "SELECT * FROM businesses WHERE owner_id = ?",
       [userId]
@@ -388,11 +402,13 @@ export const getBusinessByUserId = async (req, res) => {
 
     const businessIds = businessRows.map(b => b.id);
 
+    // Step 2: Get all images related to these businesses
     const [imageRows] = await pool.query(
       "SELECT id, image_url, business_id FROM business_images WHERE business_id IN (?)",
       [businessIds]
     );
 
+    // Step 3: Group images by business_id
     const imagesMap = {};
     imageRows.forEach(img => {
       if (!imagesMap[img.business_id]) {
@@ -404,6 +420,7 @@ export const getBusinessByUserId = async (req, res) => {
       });
     });
 
+    // Step 4: Attach images to each business
     const businesses = businessRows.map(b => ({
       ...b,
       images: imagesMap[b.id] || []
@@ -415,7 +432,6 @@ export const getBusinessByUserId = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
-
 
 // Delete images
 const __filename = fileURLToPath(import.meta.url);
