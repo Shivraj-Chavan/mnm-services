@@ -6,9 +6,10 @@ import subcategoryRoutes from "./subcategoryRoutes.js";
 import userRoutes from "./userRoutes.js";
 import businessRoutes from "./businessRoutes.js";
 import reviewRoutes from "./reviewRoutes.js";
-import enquiryRoutes from "./enquiryRoutes.js"
+import enquiryRoutes from "./enquiryRoutes.js";
+import contactRoutes from "./contactRoutes.js";
 // import filterRoutes from "./filterRoutes.js";
-// import paymentRoutes from "./paymentRoutes.js";
+import paymentRoutes from "./paymentRoutes.js";
 // import adminRoutes from "./adminRoutes.js";
 
 const router = express.Router();
@@ -20,9 +21,10 @@ router.use("/categories", categoryRoutes);
 router.use("/subcategories", subcategoryRoutes);
 router.use("/businesses", businessRoutes);
 router.use("/reviews", reviewRoutes);
-router.use("/enquiries",enquiryRoutes)
+router.use("/enquiries",enquiryRoutes);
+router.use("/contact",contactRoutes);
 // router.use("/filters", filterRoutes);
-// router.use("/payments", paymentRoutes);
+router.use("/payments", paymentRoutes);
 // router.use("/admin", adminRoutes);
 
 export default router;

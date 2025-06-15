@@ -37,47 +37,51 @@ export const submitEnquiry = async (req, res) => {
 export const getAllEnquiriesForOwner = async (req, res) => {
   try {
     const ownerId = req.user?.id;
+    console.log("Decoded ownerId:", ownerId);
 
     if (!ownerId) return res.status(401).json({ msg: 'Unauthorized' });
 
     const query = `
-      SELECT
-        b.id AS business_id,
-        b.name AS business_name,
-        e.id AS enquiry_id,
-        e.message,
-        e.created_at,
-        u.username,
-        u.email
-      FROM businesses b
-      JOIN enquiries e ON e.business_id = b.id
-      JOIN users u ON e.user_id = u.id
-      WHERE b.owner_id = ?
-      ORDER BY b.name ASC, e.created_at DESC
+    SELECT
+      b.id AS business_id,
+      b.name AS business_name,
+      e.id AS enquiry_id,
+      e.message,
+      e.created_at,
+      u.email
+    FROM businesses b
+    LEFT JOIN enquiries e ON e.business_id = b.id
+    LEFT JOIN users u ON e.user_id = u.id
+    WHERE b.owner_id = ?
+    ORDER BY b.name ASC, e.created_at DESC
     `;
 
     const [rows] = await pool.query(query, [ownerId]);
+    console.log("DB Rows:", rows);
 
-    // Group enquiries by business
     const grouped = {};
     rows.forEach(row => {
-      const { business_id, business_name, ...enquiry } = row;
+      const { business_id, business_name, enquiry_id, message, created_at, email } = row;
+
       if (!grouped[business_id]) {
         grouped[business_id] = {
           name: business_name,
           enquiries: [],
         };
       }
-      grouped[business_id].enquiries.push({
-        id: enquiry.enquiry_id,
-        message: enquiry.message,
-        created_at: enquiry.created_at,
-        username: enquiry.username,
-        email: enquiry.email,
-      });
+
+      if (enquiry_id !== null) {
+        grouped[business_id].enquiries.push({
+          id: enquiry_id,
+          message,
+          created_at,
+          email,
+        });
+      }
     });
 
     res.json(grouped);
+
   } catch (error) {
     console.error('Get Enquiries Error:', error);
     res.status(500).json({ msg: 'Server error', error: error.message });
