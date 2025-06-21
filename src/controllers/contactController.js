@@ -10,7 +10,7 @@ export const submitContactForm = async(req,res) =>{
       }
 
       try {
-        const query = `INSERT INTO contact_us (company_name, user_name, phone, enquiry, created_at) VALUES (?, ?, ?, ?, ?)`;
+        const query = `INSERT INTO contact_us (company_name, user_name, phone, enquiry) VALUES (?, ?, ?, ?)`;
         await pool.execute(query, [companyName, username, phone, enquiry]);
         res.status(201).json({ message: "Contact form submitted successfully" });
       } catch (error) {
