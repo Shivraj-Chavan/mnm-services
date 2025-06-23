@@ -15,7 +15,7 @@ export const sendOtpViaEmail = async (email, otp) => {
     subject: 'New Registration Form Submission',
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.5">
-        <h2>Hello ☺️,</h2>
+        <h2>Hello  ☺️,</h2>
         <p>Your OTP for email verification is:</p>
         <h3 style="color:#ff6600;font-size:24px">${otp}</h3>
         <p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>

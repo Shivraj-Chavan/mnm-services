@@ -88,6 +88,35 @@ export const getAllEnquiriesForOwner = async (req, res) => {
   }
 };
 
+
+// All enquiries
+export const getAllEnquiriesForAdmin = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        e.id AS enquiry_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        e.message,
+        e.created_at,
+        b.id AS business_id,
+        b.name AS business_name
+      FROM enquiries e
+      JOIN businesses b ON e.business_id = b.id
+      JOIN users u ON e.user_id = u.id
+      ORDER BY b.name ASC, e.created_at DESC
+    `;
+
+    const [rows] = await pool.query(query);
+
+    res.json(rows); // Return flat array (simpler for frontend)
+  } catch (err) {
+    console.error("Error fetching admin enquiries:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
 // Get a single enquiry by ID
 // export const getSingleEnquiry = async (req, res) => {
 //   try {
