@@ -160,7 +160,7 @@ export const sendOTP = async (req, res) => {
     return res.status(200).json({ msg: "OTP sent to your email address", otp });
   } catch (error) {
     console.error("Error sending OTP:", error);
-    return res.status(500).json({ msg: "Server error", error: error.message });
+    return res.status(500).json({ msg: "Something went wrong. Please Try again.", error: error.message });
   }
 };
 
@@ -226,6 +226,6 @@ export const verifyOTP = async (req, res) => {
     }
   } catch (error) {
     console.error("Error verifying OTP:", error);
-    return res.status(500).json({ msg: "Server error", error: error.message });
+    return res.status(500).json({ msg: "Failed to Verify OTP. Please try Again.", error: error.message });
   }
 };

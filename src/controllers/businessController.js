@@ -3,7 +3,6 @@ import pool from "../config/db.js";
 import path from "path";
 import fs from 'fs/promises'; 
 import { fileURLToPath } from 'url';
-import db from '../config/db.js';
 
 export const getUniqueSlug = async (name, area, excludeId = null) => {
   let baseSlug = slugify(`${name}-${area}`, { lower: true, strict: true });
@@ -472,5 +471,158 @@ export const deleteImages = async (req, res) => {
   } catch (err) {
     console.error("Server Error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+
+// Owner submits business edit
+export const submitBusinessUpdate = async (req, res) => {
+  const businessId = req.params.id;
+  const data = req.body;
+
+  try {
+    await pool.query(
+      `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, is_verified, slug)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        businessId,
+        data.owner_id,
+        data.name,
+        data.description,
+        data.timing,
+        data.website,
+        data.address,
+        data.area,
+        data.landmark,
+        data.sector,
+        data.pin_code,
+        data.phone,
+        data.wp_number,
+        data.category_id,
+        data.subcategory_id,
+        data.email ?? null,
+        0, 
+        data.slug ?? null,
+      ]
+    );
+    
+    await pool.query("DELETE FROM update_business_images WHERE business_id = ?", [businessId]);
+    console.log("Old update images deleted for business:", businessId);
+
+    res.json({ msg: "Update submitted for review" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to submit update" });
+  }
+};
+
+// Owner uploads photos for update
+export const uploadUpdatePhotos = async (req, res) => {
+  const businessId = req.params.id;
+
+  try {
+    const photoData = req.files.map((file) => [businessId, `/uploads/${file.filename}`]);
+     
+    if (req.files.length > 2) {
+      return res.status(400).json({ msg: "Max 2 images allowed" });
+    }
+    
+    await pool.query(
+      `INSERT INTO update_business_images (business_id, image_url) VALUES = ?`, [photoData]
+    );
+     console.log("Images saved to update_business_images");
+
+    res.json({ msg: "Images uploaded for review" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Image upload failed" });
+  }
+};
+
+// Admin views pending updates
+export const getPendingUpdates = async (req, res) => {
+  try {
+    const [updates] = await pool.query(`SELECT * FROM update_businesses`);
+    console.log("Fetched pending updates:", updates.length);
+    res.json({ data: updates });
+  } catch (err) {
+    console.error("Failed to fetch pending updates:", err);
+    res.status(500).json({ msg: "Failed to fetch pending updates" });
+  }
+};
+
+// Admin approves update
+export const approveUpdate = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const [[pending]] = await pool.query(`SELECT * FROM update_businesses WHERE id = ?`, [id]);
+    console.log("Fetched pending update:", pending);
+    const [images] = await pool.query(`SELECT * FROM update_business_images WHERE business_id = ?`, [id]);
+    console.log("Fetched pending images:", images);
+
+
+    if (!pending) return res.status(404).json({ msg: "Pending update not found" });
+     console.warn(" No pending update found for ID:", id);
+     
+    // Update the original business in businesses with the new data.
+    await pool.query(
+      `UPDATE businesses SET  name=?, description=?, timing=?, website=?, phone=?, wp_number=?, address=?, area=?, landmark=?, sector=?, pin_code=?, category_id=?, subcategory_id=?, email=?, slug=?, owner_id=? WHERE id=?`,
+      [
+        pending.name,
+        pending.description,
+        pending.timing,
+        pending.website,
+        pending.phone,
+        pending.wp_number,
+        pending.address,
+        pending.area,
+        pending.landmark,
+        pending.sector,
+        pending.pin_code,
+        pending.category_id,
+        pending.subcategory_id,
+        pending.email,
+        await getUniqueSlug(pending.name, pending.area, id), 
+        pending.owner_id,
+        id
+      ]
+    );
+    console.log("Replacing existing business images...");
+
+    // Delete old image
+    await pool.query(`DELETE FROM business_images WHERE business_id = ?`, [id]);
+    if (images.length > 0) {
+      const imageData = images.map((img) => [id, img.url]);
+
+      // Insert new approved images
+      await pool.query(`INSERT INTO business_images (business_id, image_url) VALUES = ?`, [imageData]);
+      console.log("New images added:", images.length);
+    }else {
+      console.log("No new images provided.");
+    }
+
+    // Clean up pending update
+    await pool.query(`DELETE FROM update_businesses WHERE id = ?`, [id]);
+    await pool.query(`DELETE FROM update_business_images WHERE business_id = ?`, [id]);
+
+    res.json({ msg: "Business update approved" });
+  } catch (err) {
+    console.error("Error approving update:", err);
+    res.status(500).json({ msg: "Approval failed" });
+  }
+};
+
+// Admin rejects update
+export const rejectUpdate = async (req, res) => {
+  const id = req.params.id;
+  console.log("Admin rejecting update for business:", id);
+
+  try {
+    await pool.query(`DELETE FROM update_businesses WHERE id = ?`, [id]);
+    await pool.query(`DELETE FROM update_business_images WHERE business_id = ?`, [id]);
+    res.json({ msg: "Update rejected and removed" });
+  } catch (err) {
+    res.status(500).json({ msg: "Rejection failed" });
   }
 };

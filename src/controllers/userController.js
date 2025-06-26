@@ -140,3 +140,34 @@ export const getMyProfile = async (req, res) => {
 //     res.status(500).json({ msg: "Server error", error: error.message });
 //   }
 // };
+
+// Post
+export const createUser = async (req, res) => {
+  const { name, phone, email } = req.body;
+
+  // Validations
+  if (!phone || !/^\d{10}$/.test(phone)) {
+    return res.status(400).json({ message: "Phone must be 10 digits." });
+  }
+
+  if (email && !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+    return res.status(400).json({ message: "Invalid email address." });
+  }
+
+  try {
+    const [existing] = await pool.query("SELECT * FROM users WHERE phone = ?", [phone]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Phone number already registered." });
+    }
+
+    await pool.query(
+      "INSERT INTO users (name, phone, email, is_active) VALUES (?, ?, ?, ?)",
+      [name || null, phone, email || null, 1]
+    );
+
+    res.status(201).json({ message: "User created successfully" });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
