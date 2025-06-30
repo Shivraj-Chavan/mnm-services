@@ -185,56 +185,68 @@ export const getReviews = async (req, res) => {
 
 // DELETE /reviews/:id
 export const deleteReview = async (req, res) => {
-  const { review_id } = req.params;
-  const requesterId = req.user.id;
+  const reviewId = req.params.id;
+  const currentUserId = req.user.id;
 
   try {
-    // Get review data
-    const [review] = await pool.query("SELECT * FROM reviews WHERE id = ?", [review_id]);
-
-    if (review.length === 0) {
+    // Step 1: Fetch the review and business owner ID
+    const [result] = await pool.query(`
+      SELECT r.*, b.owner_id AS business_owner_id
+      FROM reviews r
+      JOIN businesses b ON r.business_id = b.id
+      WHERE r.id = ?
+    `, [reviewId]);
+    if (result.length === 0) {
       return res.status(404).json({ message: "Review not found" });
     }
 
-    const reviewData = review[0];
-
-    // If the requester is the reviewer, delete directly
-    if (reviewData.user_id === requesterId) {
-      await pool.query("DELETE FROM reviews WHERE id = ?", [review_id]);
-      return res.json({ message: "Review deleted successfully" });
+    
+    const review = result[0];
+    const isReviewer = review.user_id === currentUserId;
+    const isBusinessOwner = review.business_owner_id === currentUserId;
+    console.log({"koni takla ":review.user_id,"kon bgtay ":currentUserId,"business owner": review.business_owner_id})
+    
+    if (isReviewer) {
+      // Reviewer can delete immediately
+      await pool.query("DELETE FROM reviews WHERE id = ?", [reviewId]);
+      return res.status(200).json({ message: "Review deleted successfully" });
     }
 
-    // If requester is the business owner, raise request
-    const [business] = await pool.query("SELECT owner_id FROM businesses WHERE id = ?", [reviewData.business_id]);
+    if (isBusinessOwner) {
+      // Raise a delete request instead of deleting
+      await pool.query(`
+        UPDATE reviews SET delete_query = 1 WHERE id = ?
+      `, [reviewId]);
 
-    if (business[0].owner_id === requesterId) {
-      await pool.query("UPDATE reviews SET raised = 1 WHERE id = ?", [review_id]);
-      return res.json({ message: "Deletion request raised to admin" });
+
+      return res.status(200).json({ message: "Delete request has been raised to admin" });
     }
 
-    return res.status(403).json({ message: "Unauthorized to delete this review" });
+    return res.status(403).json({ message: "Not authorized to delete this review" });
   } catch (error) {
-    console.error("Error deleting review:", error);
-    return res.status(500).json({ message: "Server error" });
+    console.error("Delete review error:", error);
+    res.status(500).json({ message: "Server error while processing delete" });
   }
 };
 
-
 export const getRaisedReviews = async (req, res) => {
   try {
+    console.log("get rev raised ")
     const [raisedReviews] = await pool.query(`
-      SELECT r.*, b.name as business_name
+      SELECT r.*, b.name AS business_name
       FROM reviews r
       JOIN businesses b ON r.business_id = b.id
-      WHERE r.raised = 1
+      WHERE r.delete_query = 1
     `);
 
+    console.log({raisedReviews})
     res.json(raisedReviews);
   } catch (error) {
     console.error("Error fetching raised reviews:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // Admin Delete 
 export const adminDeleteReview = async (req, res) => {

@@ -126,6 +126,13 @@ export const getBusinessById = async (req, res) => {
 export const updateBusiness = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    console.log("Business ID:", id);
+    console.log("Current User ID:", userId);
+    console.log("User Role:", role);
+
     const {
       owner_id = null,
       name = null,
@@ -143,65 +150,102 @@ export const updateBusiness = async (req, res) => {
       timings = [],
       is_verified = false,
     } = req.body;
-    
+    console.log("Request Body:", req.body);
+
     const slug = await getUniqueSlug(name, area, id);
 
-    const [result] = await pool.execute(
-      `UPDATE businesses SET 
-        owner_id = ?, 
-        name = ?, 
-        category_id = ?, 
-        subcategory_id = ?, 
-        pin_code = ?, 
-        address = ?, 
-        landmark = ?, 
-        sector = ?, 
-        area = ?, 
-        phone = ?, 
-        wp_number = ?, 
-        email = ?, 
-        website = ?, 
-        timing = ?, 
-        slug = ?,
-        is_verified = ?
+     // Admin updates directly
+    if (role === "admin") {
+      console.log("Admin is updating the business directly...");
+     
+      const [result] = await pool.execute(
+        `UPDATE businesses SET 
+          owner_id = ?, 
+          name = ?, 
+          category_id = ?, 
+          subcategory_id = ?, 
+          pin_code = ?, 
+          address = ?, 
+          landmark = ?, 
+          sector = ?, 
+          area = ?, 
+          phone = ?, 
+          wp_number = ?, 
+          email = ?, 
+          website = ?, 
+          timing = ?, 
+          slug = ?,
+          is_verified = ?
         WHERE id = ?`,
-      [
-        owner_id,
-        name,
-        category_id,
-        subcategory_id,
-        pin_code,
-        address,
-        landmark,
-        sector,
-        area,
-        phone,
-        wp_number,
-        email,
-        website,
-        JSON.stringify(timings),
-        slug,
-        is_verified,
-        id,
-      ]
-    );
+        [
+          owner_id,
+          name,
+          category_id,
+          subcategory_id,
+          pin_code,
+          address,
+          landmark,
+          sector,
+          area,
+          phone,
+          wp_number,
+          email,
+          website,
+          JSON.stringify(timings),
+          slug,
+          is_verified,
+          id,
+        ]
+      );
+      console.log("Update result:", result);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ msg: "Business not found or nothing to update" });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ msg: "Business not found or nothing to update" });
+      }
+
+      return res.status(200).json({ msg: "Business updated successfully by admin", slug });
+    } else {
+      // Owner submit request for approval
+      const [existing] = await pool.execute(`SELECT id FROM update_businesses WHERE business_id = ? AND status = 'pending'`, [id]);
+
+      if (existing.length > 0) {
+        return res.status(409).json({ msg: "An update request is already pending for this business" });
+      }
+
+      await pool.execute(
+        `INSERT INTO update_businesses (
+          business_id, owner_id, name, category_id, subcategory_id, pin_code, address,
+          landmark, sector, area, phone, wp_number, email, website, timing, slug, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [
+          id,
+          userId,
+          name,
+          category_id,
+          subcategory_id,
+          pin_code,
+          address,
+          landmark,
+          sector,
+          area,
+          phone,
+          wp_number,
+          email,
+          website,
+          JSON.stringify(timings),
+          slug,
+        ]
+      );
+      console.log("Owner update inserted into update_businesses table.");
+      return res.status(200).json({ msg: "Business update submitted for admin approval", slug });
     }
-
-     // Get updated business
-     const [updatedBusinessRows] = await pool.execute(
-      `SELECT * FROM businesses WHERE id = ?`,
-      [id]
-    );
-    const updatedBusiness = updatedBusinessRows[0];
-
-    res.status(200).json({ msg: "Business updated successfully", slug });
+    
   } catch (error) {
+    console.error("Update business error:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
 
 export const deleteBusiness = async (req, res) => {
   try {
@@ -349,6 +393,68 @@ export const getBusinesses = async (req, res) => {
   }
 };
 
+export const globalSearchBusinesses = async (req, res) => {
+  try {
+    let { q = "", page = 1, limit = 10 } = req.query;
+    q = q.trim();
+
+    if (!q) {
+      return res.status(400).json({ msg: "Search query is required" });
+    }
+
+    page = Math.max(1, parseInt(page));
+    limit = Math.max(1, parseInt(limit));
+    const offset = (page - 1) * limit;
+
+    const searchFields = [
+      "b.name",
+      "b.description",
+      "b.address",
+      "b.landmark",
+      "b.area",
+      "b.sector",
+      "c.name",
+      "sc.name"
+    ];
+
+    const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
+    const searchValues = new Array(searchFields.length).fill(`%${q}%`);
+
+    const searchQuery = `
+      SELECT b.* FROM businesses b
+      LEFT JOIN category c ON b.category_id = c.id
+      LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
+      WHERE b.is_verified = 1 AND (${searchConditions})
+      LIMIT ? OFFSET ?
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM businesses b
+      LEFT JOIN category c ON b.category_id = c.id
+      LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
+      WHERE b.is_verified = 1 AND (${searchConditions})
+    `;
+
+    const [dataRows] = await pool.query(searchQuery, [...searchValues, limit, offset]);
+    const [[countResult]] = await pool.query(countQuery, searchValues);
+
+    const total = countResult.total;
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      page,
+      limit,
+      total,
+      totalPages,
+      data: dataRows
+    });
+  } catch (error) {
+    console.error("Error in global search:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+
 // upload img for business
 export const uploadPhotosForBusiness = async (req, res) => {
   try {
@@ -474,13 +580,16 @@ export const deleteImages = async (req, res) => {
   }
 };
 
-
 // Owner submits business edit
 export const submitBusinessUpdate = async (req, res) => {
   const businessId = req.params.id;
   const data = req.body;
-
+  const user = req.user;
+  
   try {
+    if (user.role === 'admin') {
+      return res.status(403).json({ msg: "Admins must update directly" });
+    }
     await pool.query(
       `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, is_verified, slug)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -528,7 +637,7 @@ export const uploadUpdatePhotos = async (req, res) => {
     }
     
     await pool.query(
-      `INSERT INTO update_business_images (business_id, image_url) VALUES = ?`, [photoData]
+      `INSERT INTO update_business_images (business_id, image_url) VALUES ?`, [photoData]
     );
      console.log("Images saved to update_business_images");
 
@@ -593,10 +702,10 @@ export const approveUpdate = async (req, res) => {
     // Delete old image
     await pool.query(`DELETE FROM business_images WHERE business_id = ?`, [id]);
     if (images.length > 0) {
-      const imageData = images.map((img) => [id, img.url]);
+      const imageData = images.map((img) => [id, img.image_url]);
 
       // Insert new approved images
-      await pool.query(`INSERT INTO business_images (business_id, image_url) VALUES = ?`, [imageData]);
+      await pool.query(`INSERT INTO business_images (business_id, image_url) VALUES ?`, [imageData]);
       console.log("New images added:", images.length);
     }else {
       console.log("No new images provided.");

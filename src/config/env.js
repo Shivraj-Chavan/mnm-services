@@ -23,7 +23,7 @@ export const config = {
   JWT_EXPIRATION: getEnv("JWT_EXPIRATION", "1d"),
 
   FRONTEND_URL: getEnv("FRONTEND_URL","*"),
-  ALLOWED_ORIGINS: getEnv("ALLOWED_ORIGINS", "*"),
+  ALLOWED_ORIGINS: getEnv("ALLOWED_ORIGINS", "https://majhinavimumbai.com/"),
 
   LOG_LEVEL: getEnv("LOG_LEVEL", "info"),
 };

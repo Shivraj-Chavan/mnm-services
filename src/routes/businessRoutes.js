@@ -8,7 +8,8 @@ import {
   getBusinessBySlug,
   uploadPhotosForBusiness,
   getBusinessByUserId,
-  deleteImages, submitBusinessUpdate, uploadUpdatePhotos, getPendingUpdates, approveUpdate, rejectUpdate
+  deleteImages, submitBusinessUpdate, uploadUpdatePhotos, getPendingUpdates, approveUpdate, rejectUpdate,
+  globalSearchBusinesses
 } from "../controllers/businessController.js";
 import { validateUser,validateAdmin } from "../middlewares/auth.js";
 import {upload} from "../middlewares/upload.js";
@@ -16,6 +17,7 @@ import {upload} from "../middlewares/upload.js";
 const router = express.Router();
 router.get("/", getBusinesses); 
 router.get("/s/:slug",getBusinessBySlug)
+router.get("/search",globalSearchBusinesses)
 router.get("/user",validateUser, getBusinessByUserId);
 router.get("/:id",validateUser, getBusinessById);
 router.post("/",validateUser, createBusiness);

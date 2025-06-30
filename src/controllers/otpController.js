@@ -95,10 +95,10 @@ import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 // Send OTP API
 export const sendOTP = async (req, res) => {
   try {
-    let {name, email } = req.body;
+    let { email } = req.body;
     console.log("Received from frontend:", req.body);
 
-    if (!name || !email) return res.status(400).json({ msg: "Name and Email are required" });
+    if ( !email) return res.status(400).json({ msg: "Email is required" });
     
     // phone = normalizePhone(phone);
     // if (!/^\d{10}$/.test(phone)) {
@@ -147,7 +147,7 @@ export const sendOTP = async (req, res) => {
       await conn.query(
         `INSERT INTO otp_verifications (name, email, otp, expires_at) 
          VALUES ( ?, ?, ?, NOW() + INTERVAL ${OTP_EXPIRY_MINUTES} MINUTE)`,
-        [ name, email, otp]
+        [ "", email, otp]
       );
       await conn.commit();
     } catch (err) {
@@ -168,8 +168,8 @@ export const sendOTP = async (req, res) => {
 export const verifyOTP = async (req, res) => {
   try {
     const { name, email, otp } = req.body;
-    console.log("Received in verifyOTP:", { name, email, otp });
-    if (!name || !email || !otp) {
+    console.log("Received in verifyOTP:", { name:"", email, otp });
+    if ( !email || !otp) {
       return res.status(400).json({ msg: "Email and OTP are required" });
     }
 
@@ -206,7 +206,7 @@ export const verifyOTP = async (req, res) => {
       } else {
         const [result] = await conn.query(
           `INSERT INTO users (name, email, role) VALUES (?, ?, 'user')`,
-          [name, email]
+          ["", email]
         );
         userId = result.insertId;
         role = "user";
