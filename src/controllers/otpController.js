@@ -106,7 +106,7 @@ export const sendOTP = async (req, res) => {
     // }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(email) && !email.endsWith("@majhinavimumbai.com")) {
       return res.status(400).json({ msg: "Invalid email format. Only @gmail.com is allowed." });
     }
 
