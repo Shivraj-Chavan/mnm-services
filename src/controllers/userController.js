@@ -71,18 +71,21 @@ export const updateUserProfile = async (req, res) => {
     }
   } 
 
-
   export const getAllUsers = async (req, res) => {
-  try {
-    const query = `
-    SELECT id,name,email,phone,profile_image,is_active FROM users WHERE role='user' 
-  `;
-  const [users] = await pool.query(query);
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-};
+    try {
+      const query = `
+        SELECT id, name, email, phone, profile_image, is_active
+        FROM users
+        WHERE role = 'user'
+        ORDER BY created_at DESC
+      `;
+      const [users] = await pool.query(query);
+      res.status(200).json(users);
+    } catch (error) {
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  };
+  
 
 export const getMyProfile = async (req, res) => {
   try {

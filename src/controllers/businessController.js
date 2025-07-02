@@ -630,18 +630,31 @@ export const uploadUpdatePhotos = async (req, res) => {
   const businessId = req.params.id;
 
   try {
-    const photoData = req.files.map((file) => [businessId, `/uploads/${file.filename}`]);
-     
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ msg: "No files uploaded" });
+    }
+
+
     if (req.files.length > 2) {
       return res.status(400).json({ msg: "Max 2 images allowed" });
     }
-    
-    await pool.query(
-      `INSERT INTO update_business_images (business_id, image_url) VALUES ?`, [photoData]
-    );
-     console.log("Images saved to update_business_images");
+    for (const file of req.files) {
+      if (file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ msg: `File ${file.originalname} exceeds 5MB limit` });
+      }
+    }
 
-    res.json({ msg: "Images uploaded for review" });
+     // Prepare image paths
+     const photoData = req.files.map((file) => [businessId, `/uploads/${file.filename}`]);
+
+     // Store image paths
+     await pool.query(
+       `INSERT INTO update_business_images (business_id, image_url) VALUES ?`, [photoData]
+     );
+ 
+     console.log("Images saved to update_business_images");
+     res.json({ msg: "Images uploaded for review" });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Image upload failed" });
@@ -652,8 +665,23 @@ export const uploadUpdatePhotos = async (req, res) => {
 export const getPendingUpdates = async (req, res) => {
   try {
     const [updates] = await pool.query(`SELECT * FROM update_businesses`);
-    console.log("Fetched pending updates:", updates.length);
-    res.json({ data: updates });
+    const [images] = await pool.query(`SELECT * FROM update_business_images`);
+
+    const imagesByBusinessId = {};
+    for (const img of images) {
+      if (!imagesByBusinessId[img.business_id]) {
+        imagesByBusinessId[img.business_id] = [];
+      }
+      imagesByBusinessId[img.business_id].push(img.image_url);
+    }
+
+    const updatesWithImages = updates.map(update => ({
+      ...update,
+      images: imagesByBusinessId[update.id] || [],
+    }));
+
+    console.log("Fetched pending updates:", updatesWithImages.length);
+    res.json({ data: updatesWithImages });
   } catch (err) {
     console.error("Failed to fetch pending updates:", err);
     res.status(500).json({ msg: "Failed to fetch pending updates" });
