@@ -462,7 +462,6 @@ export const deleteImages = async (req, res) => {
       await fs.unlink(filePath);
     } catch (err) {}
 
-
     res.json({ message: "Photo deleted successfully" });
   } catch (err) {
     console.error("Server Error:", err);
