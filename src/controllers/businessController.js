@@ -215,8 +215,8 @@ export const updateBusiness = async (req, res) => {
       await pool.execute(
         `INSERT INTO update_businesses (
           business_id, owner_id, name, category_id, subcategory_id, pin_code, address,
-          landmark, sector, area, phone, wp_number, email, website, timing, slug, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+          landmark, sector, area, phone, wp_number, email, website, timing, slug, is_verified, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           id,
           userId,
@@ -234,6 +234,7 @@ export const updateBusiness = async (req, res) => {
           website,
           JSON.stringify(timings),
           slug,
+          is_verified,
         ]
       );
       console.log("Owner update inserted into update_businesses table.");
@@ -553,14 +554,19 @@ export const deleteImages = async (req, res) => {
 
     const fileName = path.basename(photoUrl);
     const filePath = path.join(__dirname, "../../uploads/business_photos", fileName);
+    console.log("Resolved File Path:", filePath);
 
-    // Ensure file exists before deleting
-    await fs.access(filePath);
-    await fs.unlink(filePath); 
-    console.log("Deleted file:", filePath);
+    // Delete file if exists
+    try {
+      await fs.access(filePath);
+      await fs.unlink(filePath);
+      console.log("Deleted file:", filePath);
+    } catch (fileErr) {
+      console.warn("File not found, skipping deletion:", filePath);
+    }
 
+    // Fetch current images array
     const [rows] = await pool.query("SELECT images FROM businesses WHERE id = ?", [businessId]);
-
     if (rows.length === 0) {
       return res.status(404).json({ error: "Business not found" });
     }
@@ -569,9 +575,9 @@ export const deleteImages = async (req, res) => {
     const updatedImages = images.filter((img) => img !== fileName);
 
     await pool.query("UPDATE businesses SET images = ? WHERE id = ?", [
-        JSON.stringify(updatedImages),
-        businessId,
-      ]);
+      JSON.stringify(updatedImages),
+      businessId,
+    ]);
 
     res.json({ message: "Photo deleted successfully" });
   } catch (err) {
