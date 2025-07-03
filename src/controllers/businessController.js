@@ -548,36 +548,25 @@ export const deleteImages = async (req, res) => {
     const businessId = req.params.id;
     const { photoUrl } = req.body;
 
+
     if (!photoUrl) {
       return res.status(400).json({ error: "photoUrl is required" });
     }
 
-    const fileName = path.basename(photoUrl);
+    const parts = photoUrl.split("/");
+    const fileName = parts[parts.length - 1];
+    const dbPath = `/uploads/${fileName}`;
     const filePath = path.join(__dirname, "../../uploads/business_photos", fileName);
-    console.log("Resolved File Path:", filePath);
 
-    // Delete file if exists
+    await pool.query(
+      "DELETE FROM business_images WHERE image_url = ? AND business_id = ?",
+      [dbPath, businessId]
+    );
+
     try {
       await fs.access(filePath);
       await fs.unlink(filePath);
-      console.log("Deleted file:", filePath);
-    } catch (fileErr) {
-      console.warn("File not found, skipping deletion:", filePath);
-    }
-
-    // Fetch current images array
-    const [rows] = await pool.query("SELECT images FROM businesses WHERE id = ?", [businessId]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Business not found" });
-    }
-
-    const images = JSON.parse(rows[0].images || "[]");
-    const updatedImages = images.filter((img) => img !== fileName);
-
-    await pool.query("UPDATE businesses SET images = ? WHERE id = ?", [
-      JSON.stringify(updatedImages),
-      businessId,
-    ]);
+    } catch (err) {}
 
     res.json({ message: "Photo deleted successfully" });
   } catch (err) {
@@ -585,6 +574,7 @@ export const deleteImages = async (req, res) => {
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
+
 
 // Owner submits business edit
 export const submitBusinessUpdate = async (req, res) => {
