@@ -759,3 +759,19 @@ export const rejectUpdate = async (req, res) => {
     res.status(500).json({ msg: "Rejection failed" });
   }
 };
+
+export const getBusinessImages = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [images] = await pool.query(
+      "SELECT id, image_url FROM business_images WHERE business_id = ?",
+      [id]
+    );
+
+    res.status(200).json({ images });
+  } catch (err) {
+    console.error("Error fetching images:", err);
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
