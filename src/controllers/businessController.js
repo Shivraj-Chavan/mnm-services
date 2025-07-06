@@ -149,6 +149,7 @@ export const updateBusiness = async (req, res) => {
       website = null,
       timings = [],
       is_verified = false,
+      description=null
     } = req.body;
     console.log("Request Body:", req.body);
 
@@ -175,7 +176,8 @@ export const updateBusiness = async (req, res) => {
           website = ?, 
           timing = ?, 
           slug = ?,
-          is_verified = ?
+          is_verified = ?,
+          description = ?
         WHERE id = ?`,
         [
           owner_id,
@@ -194,6 +196,7 @@ export const updateBusiness = async (req, res) => {
           JSON.stringify(timings),
           slug,
           is_verified,
+          description,
           id,
         ]
       );
@@ -320,7 +323,10 @@ export const getBusinesses = async (req, res) => {
     console.log('Offset:', offset);
 
     let isVerifiedValue = (isVerified === 'false' || isVerified === 0 || isVerified === '0') ? 0 : 1;
-    let query = `SELECT * FROM businesses WHERE is_verified = ?`;
+    let query = `SELECT b.*, 
+                (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url
+              FROM businesses b
+              WHERE b.is_verified = ?`;
     let values = [isVerifiedValue];
 
     if (categoryslug) {
@@ -422,7 +428,9 @@ export const globalSearchBusinesses = async (req, res) => {
     const searchValues = new Array(searchFields.length).fill(`%${q}%`);
 
     const searchQuery = `
-      SELECT b.* FROM businesses b
+      SELECT b.*, 
+      (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url
+    FROM businesses b
       LEFT JOIN category c ON b.category_id = c.id
       LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
       WHERE b.is_verified = 1 AND (${searchConditions})
@@ -587,8 +595,8 @@ export const submitBusinessUpdate = async (req, res) => {
       return res.status(403).json({ msg: "Admins must update directly" });
     }
     await pool.query(
-      `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, is_verified, slug)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, slug)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         businessId,
         data.owner_id,
