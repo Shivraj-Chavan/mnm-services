@@ -37,7 +37,7 @@ app.use("/uploads/:imageName", (req, res, next) => {
     res.status(404).send("Image not found");
   }
 });
-app.listen(config.PORT,'0.0.0.0', () => {
+app.listen(config.PORT,'127.0.0.1', () => {
   logger.info(` Server running on port  http://localhost:${config.PORT}`);
   console.log(`Swagger Docs available at http://localhost:${config.PORT}/api-docs`);
 
