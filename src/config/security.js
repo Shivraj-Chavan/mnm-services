@@ -7,7 +7,7 @@ import rateLimiter from './rateLimit.js'
 import { config } from "./env.js";
 
 export const securityMiddlewares = (app) => {
-  app.use(rateLimiter)
+  // app.use(rateLimiter)
   app.use(helmet());    
   app.use(xss());   
   app.use(hpp());   
