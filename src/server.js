@@ -8,12 +8,22 @@ import path from 'path'
 import { fileURLToPath } from "url";
 
 const app = express();
-
+dotenv.config();
+app.use((req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+app.use((err, req, res, next) => {
+  if (err.status === 429) {
+    console.error("⚠️ Rate limit hit:", err.message);
+    return res.status(429).json({ error: "Custom Rate Limit Hit", detail: err.message });
+  }
+  next(err);
+});
 securityMiddlewares(app);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
 app.use(express.json());
 app.use("/api", routes);
 // const swaggerFile = JSON.parse(fs.readFileSync("./src/swagger.json", "utf8"));
