@@ -128,12 +128,12 @@ export const sendOTP = async (req, res) => {
       [email]
     );
 
-    if (dailyCount >= 10) {
-      return res.status(429).json({ msg: "Daily OTP limit reached. Try again tomorrow." });
-    }
+    // if (dailyCount >= 10) {
+    //   return res.status(429).json({ msg: "Daily OTP limit reached. Try again tomorrow." });
+    // }
 
-    if (last15MinCount >= 3) {
-      return res.status(429).json({ msg: "You can request OTP only 3 times in 15 minutes." });
+    if (last15MinCount >= 10) {
+      return res.status(429).json({ msg: "You can request OTP only 10 times in 15 minutes." });
     }
 
     // const otp = generateOTP();
