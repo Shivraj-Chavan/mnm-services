@@ -29,6 +29,7 @@ export const getUniqueSlug = async (name, area, excludeId = null) => {
 };
 
 export const createBusiness = async (req, res) => {
+  console.log("CREating business")
   try {
     const userId = req.user.id; 
     const {
@@ -79,6 +80,8 @@ export const createBusiness = async (req, res) => {
 
     res.status(201).json({ msg: "Business created successfully", id: result.insertId });
   } catch (error) {
+    console.log("BUSINESS create error ")
+    console.log(error.message)
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
