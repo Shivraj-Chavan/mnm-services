@@ -25,5 +25,5 @@ export const config = {
   FRONTEND_URL: getEnv("FRONTEND_URL","*"),
   ALLOWED_ORIGINS: getEnv("ALLOWED_ORIGINS", "*"),
 
-  LOG_LEVEL: getEnv("LOG_LEVEL", "info"),
+  LOG_LEVEL: getEnv("LOG_LEVEL", "debug"),
 };

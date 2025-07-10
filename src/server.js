@@ -9,6 +9,11 @@ import { fileURLToPath } from "url";
 
 const app = express();
 dotenv.config();
+console.log = (...args) => logger.info(args.join(' '));
+console.info = (...args) => logger.info(args.join(' '));
+console.warn = (...args) => logger.warn(args.join(' '));
+console.error = (...args) => logger.error(args.join(' '));
+
 app.use((req, res, next) => {
   console.log(`📥 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
@@ -47,6 +52,9 @@ app.use("/uploads/:imageName", (req, res, next) => {
     res.status(404).send("Image not found");
   }
 });
+app.use("*", (req, res) => {
+  res.status(404).json({ error: "Route not found" });
+})
 app.listen(config.PORT,'0.0.0.0', () => {
   logger.info(` Server running on port  http://localhost:${config.PORT}`);
   console.log(`Swagger Docs available at http://localhost:${config.PORT}/api-docs`);
