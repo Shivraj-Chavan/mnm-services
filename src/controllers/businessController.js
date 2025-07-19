@@ -620,7 +620,7 @@ export const submitBusinessUpdate = async (req, res) => {
         0, 
         data.slug ?? null,
       ]
-    );
+    ); 
     
     await pool.query("DELETE FROM update_business_images WHERE business_id = ?", [businessId]);
     console.log("Old update images deleted for business:", businessId);

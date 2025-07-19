@@ -10,6 +10,7 @@ import enquiryRoutes from "./enquiryRoutes.js";
 import contactRoutes from "./contactRoutes.js";
 // import filterRoutes from "./filterRoutes.js";
 import paymentRoutes from "./paymentRoutes.js";
+import countRoutes from "./countRoutes.js";
 // import adminRoutes from "./adminRoutes.js";
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.use("/businesses", businessRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/enquiries",enquiryRoutes);
 router.use("/contact",contactRoutes);
+router.use("/count",countRoutes);
 // router.use("/filters", filterRoutes);
 router.use("/payments", paymentRoutes);
 // router.use("/admin", adminRoutes);
