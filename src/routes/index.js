@@ -12,6 +12,7 @@ import contactRoutes from "./contactRoutes.js";
 import paymentRoutes from "./paymentRoutes.js";
 import countRoutes from "./countRoutes.js";
 // import adminRoutes from "./adminRoutes.js";
+import dashboardRoutes from "./dashboardRoutes.js";
 
 const router = express.Router();
 
@@ -29,4 +30,5 @@ router.use("/count",countRoutes);
 router.use("/payments", paymentRoutes);
 // router.use("/admin", adminRoutes);
 
+router.use("/dashboard",dashboardRoutes)
 export default router;

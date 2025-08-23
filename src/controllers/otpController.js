@@ -2,7 +2,7 @@ import axios from "axios";
 import pool from "../config/db.js";
 import crypto from "crypto";
 import jwt from 'jsonwebtoken';
-import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
+// import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 
 // import twilio from 'twilio';
 
@@ -90,31 +90,64 @@ import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 //   }
 // };
 
-// const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
+const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
+
+const sendOtpViaMSG91 = async (phone, otp) => {
+  const options = {
+    method: 'POST',
+    url: 'https://control.msg91.com/api/v5/flow',
+    headers: {
+      accept: 'application/json',
+      authkey: '461857Acajevnc7Mx6899c038P1',
+      'content-type': 'application/json'
+    },
+    data: {
+      template_id: '68a2c14473ea33076a03d8d4',
+      realTimeResponse: "1",
+      recipients: [
+        {
+          mobiles: `91${phone}`,
+          var: otp,
+        },
+      ],
+    },
+  };
+
+  try {
+    const { data } = await axios.request(options);
+    console.log(`MSG91 Response: ${data}`);
+    return data;
+  } catch (error) {
+    console.error("MSG91 Error:", error.response?.data || error.message);
+    throw new Error("Failed to send OTP via MSG91");
+  }
+};
+
 
 // Send OTP API
 export const sendOTP = async (req, res) => {
   try {
-    let { email } = req.body;
+    let { phone } = req.body;
     console.log("Received from frontend:", req.body);
 
-    if ( !email) return res.status(400).json({ msg: "Email is required" });
+    if ( !phone) return res.status(400).json({ msg: "Phone Number is required" });
     
-    // phone = normalizePhone(phone);
-    // if (!/^\d{10}$/.test(phone)) {
-    //   return res.status(400).json({ msg: "Invalid phone number" });
-    // }
-
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!emailRegex.test(email) && !email.endsWith("@majhinavimumbai.com")) {
-      return res.status(400).json({ msg: "Invalid email format. Only @gmail.com is allowed." });
+    phone = normalizePhone(phone);
+    if (!/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ msg: "Invalid phone number" });
     }
 
+    // const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    // if (!emailRegex.test(email) && !email.endsWith("@majhinavimumbai.com")) {
+    //   return res.status(400).json({ msg: "Invalid email format. Only @gmail.com is allowed." });
+    // }
+
     const otp = crypto.randomInt(100000, 999999).toString();
-    console.log(`Generated OTP for ${email}: ${otp}`);
+    console.log(`Generated OTP for ${phone}: ${otp}`);
 
      // Send OTP using Nodemailer
-     await sendOtpViaEmail(email, otp);
+    //  await sendOtpViaEmail(phone, otp);
+    await sendOtpViaMSG91 (phone,otp);
 
     const OTP_EXPIRY_MINUTES = parseInt(process.env.OTP_EXPIRY_MINUTES) || 5;
 
@@ -122,10 +155,10 @@ export const sendOTP = async (req, res) => {
       `SELECT 
        COUNT(*) AS dailyCount, 
        COUNT(CASE WHEN created_at > NOW() - INTERVAL 15 MINUTE THEN 1 END) AS last15MinCount 
-       FROM otp_verifications 
-       WHERE email = ? 
+       FROM otp_verifications  
+       WHERE phone = ? 
        AND DATE(created_at) = CURDATE()`,
-      [email]
+      [phone]
     );
 
     // if (dailyCount >= 10) {
@@ -140,14 +173,15 @@ export const sendOTP = async (req, res) => {
     // console.log(`Generated OTP for ${phone}: ${otp}`);    
     // await sendViaFast2SMS(phone, otp); 
     // await sendViaTextLocal (phone,otp);
+    // await sendOtpViaMSG91 (phone,otp);
 
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
       await conn.query(
-        `INSERT INTO otp_verifications (name, email, otp, expires_at) 
+        `INSERT INTO otp_verifications (name, phone, otp, expires_at) 
          VALUES ( ?, ?, ?, NOW() + INTERVAL ${OTP_EXPIRY_MINUTES} MINUTE)`,
-        [ "", email, otp]
+        [ "", phone, otp]
       );
       await conn.commit();
     } catch (err) {
@@ -157,7 +191,7 @@ export const sendOTP = async (req, res) => {
       conn.release();
     }
 
-    return res.status(200).json({ msg: "OTP sent to your email address" });
+    return res.status(200).json({ msg: "OTP sent to your Phone Number vis SMS" });
   } catch (error) {
     console.error("Error sending OTP:", error);
     return res.status(500).json({ msg: "Something went wrong. Please Try again.", error: error.message });
@@ -167,18 +201,18 @@ export const sendOTP = async (req, res) => {
 // Verify OTP API
 export const verifyOTP = async (req, res) => {
   try {
-    const { name, email, otp } = req.body;
-    console.log("Received in verifyOTP:", { name:"", email, otp });
-    if ( !email || !otp) {
-      return res.status(400).json({ msg: "Email and OTP are required" });
+    const { name, phone, otp } = req.body;
+    console.log("Received in verifyOTP:", { name:"", phone, otp });
+    if ( !phone || !otp) {
+      return res.status(400).json({ msg: "Phone Number and OTP are required" });
     }
 
     const [[otpRecord]] = await pool.query(
       `SELECT * FROM otp_verifications 
-       WHERE email = ? 
+       WHERE phone = ? 
        AND otp = ? 
        AND expires_at > NOW()`,
-      [email, otp]
+      [phone, otp]
     );
 
     if (!otpRecord) {
@@ -190,12 +224,12 @@ export const verifyOTP = async (req, res) => {
       await conn.beginTransaction();
 
       const [[existingUser]] = await conn.query(
-        `SELECT id, role FROM users WHERE email = ? LIMIT 1`,
-        [email]
+        `SELECT id, role FROM users WHERE phone = ? LIMIT 1`,
+        [phone]
       );
 
       if (existingUser?.is_verified) {
-        return res.status(400).json({ msg: "Your email is already verified." });
+        return res.status(400).json({ msg: "Your phone number is already verified." });
       }
 
       let userId, role;
@@ -205,8 +239,8 @@ export const verifyOTP = async (req, res) => {
 
       } else {
         const [result] = await conn.query(
-          `INSERT INTO users (name, email, role) VALUES (?, ?, 'user')`,
-          ["", email]
+          `INSERT INTO users (name, phone, role) VALUES (?, ?, 'user')`,
+          [ name || "", phone]
         );
         userId = result.insertId;
         role = "user";
@@ -215,7 +249,7 @@ export const verifyOTP = async (req, res) => {
       await conn.commit();
       conn.release();
 
-      const token = jwt.sign({ userId, email, role }, process.env.JWT_SECRET, {expiresIn: "15d",});
+      const token = jwt.sign({ userId, phone, role }, process.env.JWT_SECRET, {expiresIn: "15d",});
 
       return res.status(200).json({ msg: "OTP verified successfully", role, token });
     } catch (err) {
