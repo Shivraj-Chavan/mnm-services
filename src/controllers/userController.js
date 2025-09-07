@@ -71,21 +71,65 @@ export const updateUserProfile = async (req, res) => {
     }
   } 
 
+  // export const getAllUsers = async (req, res) => {
+  //   let { page = 1, limit = 10} = req.query;
+  //   try {
+  //     const query = `
+  //       SELECT id, name, email, phone, profile_image, is_active
+  //       FROM users
+  //       WHERE role = 'user'
+  //       ORDER BY created_at DESC
+  //     `;
+  //     const [users] = await pool.query(query);
+  //     res.status(200).json(users);
+  //   } catch (error) {
+  //     res.status(500).json({ msg: "Server error", error: error.message });
+  //   }
+  // };
+  
   export const getAllUsers = async (req, res) => {
+    let { page = 1, limit = 10, q = "" } = req.query;
+  
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    const offset = (page - 1) * limit;
+  
     try {
+      let whereClause = "WHERE role = 'user'";
+      const params = [];
+  
+      if (q) {
+        whereClause += " AND (name LIKE ? OR email LIKE ? OR business_name LIKE ?)";
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      }
+  
       const query = `
-        SELECT id, name, email, phone, profile_image, is_active
+        SELECT id, name, email, phone, profile_image, is_active, business_name
         FROM users
-        WHERE role = 'user'
+        ${whereClause}
         ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
       `;
-      const [users] = await pool.query(query);
-      res.status(200).json(users);
+      params.push(limit, offset);
+  
+      const [users] = await pool.query(query, params);
+  
+      const countQuery = `SELECT COUNT(*) as total FROM users ${whereClause}`;
+      const [countResult] = await pool.query(countQuery, q ? params.slice(0, -2) : []);
+      const total = countResult[0].total;
+  
+      res.status(200).json({
+        users,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
     } catch (error) {
       res.status(500).json({ msg: "Server error", error: error.message });
     }
   };
   
+
 
 export const getMyProfile = async (req, res) => {
   try {
