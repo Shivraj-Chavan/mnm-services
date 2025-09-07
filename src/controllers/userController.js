@@ -174,3 +174,104 @@ export const createUser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+export const globalSearchUsers = async (req, res) => {
+  try {
+    let { q = "", page = 1, limit = 10 } = req.query;
+    q = q.trim();
+
+    // Validate search query
+    if (!q) {
+      return res.status(400).json({ msg: "Search query is required" });
+    }
+
+    // Ensure proper pagination
+    page = Math.max(1, parseInt(page));
+    limit = Math.max(1, parseInt(limit));
+    const offset = (page - 1) * limit;
+
+    // Searchable fields
+    const searchFields = [
+      "u.name",
+      "u.email",
+      "u.phone"
+    ];
+
+    const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
+    const searchValues = new Array(searchFields.length).fill(`%${q}%`);
+
+    // Fetch matching users
+    const searchQuery = `
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.profile_image,
+        u.created_at
+      FROM users u
+      WHERE (${searchConditions})
+      ORDER BY u.name ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    // Count total matching users
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM users u
+      WHERE (${searchConditions})
+    `;
+
+    const [dataRows] = await pool.query(searchQuery, [...searchValues, limit, offset]);
+    const [[countResult]] = await pool.query(countQuery, searchValues);
+
+    const total = countResult.total;
+    const totalPages = Math.ceil(total / limit);
+
+    return res.status(200).json({
+      page,
+      limit,
+      total,
+      totalPages,
+      data: dataRows
+    });
+  } catch (error) {
+    console.error("Error in global user search:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
+
+export const userSearchSuggestions = async (req, res) => {
+  try {
+    let { q = "", limit = 5 } = req.query;
+    q = q.trim();
+
+    if (!q) {
+      return res.status(400).json({ msg: "Search query is required" });
+    }
+
+    const searchFields = ["u.name", "u.email"];
+    const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
+    const searchValues = new Array(searchFields.length).fill(`%${q}%`);
+
+    const query = `
+      SELECT u.id, u.name, u.profile_image
+      FROM users u
+      WHERE (${searchConditions})
+      ORDER BY u.name ASC
+      LIMIT ?
+    `;
+
+    const [suggestions] = await pool.query(query, [...searchValues, limit]);
+
+    return res.status(200).json({
+      suggestions
+    });
+  } catch (error) {
+    console.error("Error in user search suggestions:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
