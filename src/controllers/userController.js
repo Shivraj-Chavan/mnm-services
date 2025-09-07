@@ -99,12 +99,12 @@ export const updateUserProfile = async (req, res) => {
       const params = [];
   
       if (q) {
-        whereClause += " AND (name LIKE ? OR email LIKE ? OR business_name LIKE ?)";
-        params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+        whereClause += " AND (name LIKE ? OR email LIKE ?)";
+        params.push(`%${q}%`, `%${q}%`);
       }
   
       const query = `
-        SELECT id, name, email, phone, profile_image, is_active, business_name
+        SELECT id, name, email, phone, profile_image, is_active
         FROM users
         ${whereClause}
         ORDER BY created_at DESC
