@@ -313,7 +313,7 @@ export const getBusinessBySlug = async (req, res) => {
 export const getBusinesses = async (req, res) => {
   try {
     console.log('Logged in user:', req.user);
-    let { categoryslug, subcategoryslug, name, location, page = 1, limit = 10, isVerified = 1 } = req.query;
+    let { categoryslug, subcategoryslug, name,email,phone, location, page = 1, limit = 10, isVerified = 1 } = req.query;
     console.log('Raw query:', { categoryslug, subcategoryslug, name, location, page, limit, isVerified });
 
     page = Math.max(1, parseInt(page)); 
@@ -349,6 +349,16 @@ export const getBusinesses = async (req, res) => {
       values.push(`%${name}%`);
     }
 
+    if (email) {
+      query += ` AND email LIKE ?`;
+      values.push(`%${email}%`);
+    }
+
+    if (phone) {
+      query += ` AND phone LIKE ?`;
+      values.push(`%${phone}%`);
+    }
+
     if (location) {
       query += ` AND (address LIKE ? OR landmark LIKE ? OR sector LIKE ? OR area LIKE ?)`;
       values.push(`%${location}%`, `%${location}%`, `%${location}%`, `%${location}%`);
@@ -379,6 +389,15 @@ export const getBusinesses = async (req, res) => {
     if (name) {
       countQuery += ` AND name LIKE ?`;
       countValues.push(`%${name}%`);
+    }
+    if (email) {
+      query += ` AND email LIKE ?`;
+      values.push(`%${email}%`);
+    }
+
+    if (phone) {
+      query += ` AND phone LIKE ?`;
+      values.push(`%${phone}%`);
     }
 
     if (location) {
@@ -423,6 +442,8 @@ export const globalSearchBusinesses = async (req, res) => {
       "b.landmark",
       "b.area",
       "b.sector",
+      "b.email",
+      "b.phone",
       "c.name",
       "sc.name"
     ];
@@ -469,19 +490,74 @@ export const globalSearchBusinesses = async (req, res) => {
 
 // upload img for business
 export const uploadPhotosForBusiness = async (req, res) => {
+  console.log("Request Params:", req.params);
   try {
     const { businessId } = req.params;
+    console.log('businessid',businessId);
+    
     const files = req.files;
 
     if (!files || files.length === 0) {
+      console.warn("No files received in request");
       return res.status(400).json({ msg: "No files uploaded" });
     }
-    console.log('Uploaded files:', req.files);
+    console.log(`Received ${files.length} files for business ID: ${businessId}`);
+
+    console.log("Checking payment plan for business:", businessId);
+    const [planResult] = await pool.query(
+      `SELECT plan FROM payments WHERE business_id = ? AND status = 'completed' ORDER BY id DESC LIMIT 1`,
+      [businessId]
+    );
+    console.log("Payment plan query result:", planResult);
+
+    const selectedPlan = planResult?.[0]?.plan?.toLowerCase() || 'free';
+    console.log(`Plan for business ${businessId}: ${selectedPlan}`);
+
+    // Define image limits by plan
+    const planLimits = {
+      free: 2,
+      silver: 5,
+      gold: 10,
+      platinum: 20,
+    };
+
+    const maxImages = planLimits[selectedPlan] || 2;
+    console.log(`Image limit for '${selectedPlan}' plan: ${maxImages}`);
+
+    // Check how many already uploaded
+    const [existingImages] = await pool.query(
+      `SELECT COUNT(*) AS count FROM business_images WHERE business_id = ?`,
+      [businessId]
+    );
+    console.log("Existing images query result:", existingImages);
+
+    const currentCount = existingImages[0]?.count || 0;
+    const newTotal = currentCount + files.length;
+
+    console.log(`Existing images: ${currentCount}, New uploads: ${files.length}, Total: ${newTotal}, Allowed: ${maxImages}`);
+
+    if (newTotal > maxImages) {
+      console.warn(`Upload exceeds limit! Allowed: ${maxImages}, Current: ${currentCount}`);
+      return res.status(400).json({
+        msg: `You can upload a maximum of ${maxImages} photos for the ${selectedPlan} plan. You already have ${currentCount}.`,
+      });
+    }
+
+    // File size validation
+    for (const file of files) {
+      console.log(`Checking size for: ${file.originalname}, Size: ${file.size} bytes`);
+      if (file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({
+          msg: `File "${file.originalname}" exceeds 5MB limit.`,
+        });
+      }
+    }
 
     const savedImageUrls = [];
 
     for (let file of files) {
       const imageUrl = `/uploads/${file.filename}`;
+      console.log(`Inserting image: ${imageUrl}`);
 
       await pool.query(
         "INSERT INTO business_images (business_id, image_url, created_at) VALUES (?, ?, NOW())",
@@ -490,7 +566,7 @@ export const uploadPhotosForBusiness = async (req, res) => {
 
       savedImageUrls.push(imageUrl);
     }
-
+    console.log(`Successfully saved ${savedImageUrls.length} images for business ${businessId}`);
     res.status(201).json({
       msg: "Photos uploaded successfully",
       images: savedImageUrls,
@@ -635,16 +711,46 @@ export const submitBusinessUpdate = async (req, res) => {
 // Owner uploads photos for update
 export const uploadUpdatePhotos = async (req, res) => {
   const businessId = req.params.id;
+  console.log('businessid',businessId)
 
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ msg: "No files uploaded" });
     }
 
+    // if (req.files.length > 2) {
+    //   return res.status(400).json({ msg: "Max 2 images allowed" });
+    // }
 
-    if (req.files.length > 2) {
-      return res.status(400).json({ msg: "Max 2 images allowed" });
+     // STEP 1: Fetch selected plan
+     const [planResult] = await pool.query(
+      `SELECT plan FROM payments WHERE business_id = ? AND status = 'completed' ORDER BY id DESC LIMIT 1`,
+      [businessId]
+    );
+
+    const selectedPlan = planResult?.[0]?.plan || "free";
+    console.log(`Plan for business ${businessId}: ${selectedPlan}`);
+
+    // STEP 2: Define limits
+    const planLimits = {
+      free: 2,
+      silver: 5,
+      gold: 10,
+      platinum: 20,
+    };
+
+    const maxImages = planLimits[selectedPlan.toLowerCase()] || 2;
+    console.log(`Max images allowed for '${selectedPlan}' plan: ${maxImages}`);
+
+
+    // STEP 3: Validate
+    if (req.files.length > maxImages) {
+      console.warn(`Upload exceeds max limit (${maxImages}). Rejected.`);
+      return res.status(400).json({
+        msg: `Max ${maxImages} images allowed for ${selectedPlan} plan`,
+      });
     }
+
     for (const file of req.files) {
       if (file.size > 5 * 1024 * 1024) {
         return res.status(400).json({ msg: `File ${file.originalname} exceeds 5MB limit` });

@@ -252,7 +252,7 @@ export const getRaisedReviews = async (req, res) => {
 export const adminDeleteReview = async (req, res) => {
   const { review_id } = req.params;
 
-  try {
+  try {        
     await pool.query("DELETE FROM reviews WHERE id = ?", [review_id]);
     res.json({ message: "Review permanently deleted by admin" });
   } catch (err) {

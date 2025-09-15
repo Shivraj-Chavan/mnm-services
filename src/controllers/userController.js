@@ -99,8 +99,8 @@ export const updateUserProfile = async (req, res) => {
       const params = [];
   
       if (q) {
-        whereClause += " AND (name LIKE ? OR email LIKE ?)";
-        params.push(`%${q}%`, `%${q}%`);
+        whereClause += " AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)";
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`);
       }
   
       const query = `
@@ -129,8 +129,7 @@ export const updateUserProfile = async (req, res) => {
     }
   };
   
-
-
+  
 export const getMyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -239,7 +238,7 @@ export const globalSearchUsers = async (req, res) => {
     const searchFields = [
       "u.name",
       "u.email",
-      "u.phone"
+      "CAST(u.phone AS CHAR)"
     ];
 
     const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
@@ -259,6 +258,8 @@ export const globalSearchUsers = async (req, res) => {
       ORDER BY u.name ASC
       LIMIT ? OFFSET ?
     `;
+
+    console.log("Final SQL Query:", searchQuery);
 
     // Count total matching users
     const countQuery = `
@@ -292,21 +293,27 @@ export const userSearchSuggestions = async (req, res) => {
     let { q = "", limit = 5 } = req.query;
     q = q.trim();
 
+    console.log(" Suggestions query received:", { q, limit });
+
     if (!q) {
       return res.status(400).json({ msg: "Search query is required" });
     }
 
-    const searchFields = ["u.name", "u.email"];
+    const searchFields = ["u.name", "u.email", "CAST(u.phone AS CHAR)"];
     const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
     const searchValues = new Array(searchFields.length).fill(`%${q}%`);
 
+    console.log("Suggestions search conditions:", searchConditions);
+    console.log(" Suggestions search values:", searchValues);
+
     const query = `
-      SELECT u.id, u.name, u.profile_image
+      SELECT u.id, u.name, u.phone, u.profile_image
       FROM users u
       WHERE (${searchConditions})
       ORDER BY u.name ASC
       LIMIT ?
     `;
+    console.log(" Suggestions SQL Query:", query);
 
     const [suggestions] = await pool.query(query, [...searchValues, limit]);
 
