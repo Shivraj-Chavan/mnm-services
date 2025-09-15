@@ -349,14 +349,14 @@ export const getBusinesses = async (req, res) => {
       values.push(`%${name}%`);
     }
 
-    if (email) {
-      query += ` AND email LIKE ?`;
-      values.push(`%${email}%`);
+    if (name) {
+      query += ` OR email LIKE ?`;
+      values.push(`%${name}%`);
     }
 
-    if (phone) {
-      query += ` AND phone LIKE ?`;
-      values.push(`%${phone}%`);
+    if (name) {
+      query += ` OR phone LIKE ?`;
+      values.push(`%${name}%`);
     }
 
     if (location) {
@@ -390,14 +390,14 @@ export const getBusinesses = async (req, res) => {
       countQuery += ` AND name LIKE ?`;
       countValues.push(`%${name}%`);
     }
-    if (email) {
-      query += ` AND email LIKE ?`;
-      values.push(`%${email}%`);
+    if (name) {
+      query += ` OR email LIKE ?`;
+      values.push(`%${name}%`);
     }
 
-    if (phone) {
-      query += ` AND phone LIKE ?`;
-      values.push(`%${phone}%`);
+    if (name) {
+      query += ` OR phone LIKE ?`;
+      values.push(`%${name}%`);
     }
 
     if (location) {
@@ -421,7 +421,6 @@ export const getBusinesses = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
-
 export const globalSearchBusinesses = async (req, res) => {
   try {
     let { q = "", page = 1, limit = 10 } = req.query;
@@ -451,24 +450,48 @@ export const globalSearchBusinesses = async (req, res) => {
     const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
     const searchValues = new Array(searchFields.length).fill(`%${q}%`);
 
+    const relevanceScore = `
+      CASE 
+        WHEN b.name LIKE ? THEN 5
+        WHEN c.name LIKE ? OR sc.name LIKE ? THEN 4
+        WHEN b.description LIKE ? THEN 3
+        WHEN b.address LIKE ? OR b.landmark LIKE ? OR b.area LIKE ? OR b.sector LIKE ? THEN 2
+        WHEN b.email LIKE ? OR b.phone LIKE ? THEN 1
+        ELSE 0
+      END AS relevance
+    `;
+
     const searchQuery = `
       SELECT b.*, 
-      (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url
-    FROM businesses b
+        (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url,
+        ${relevanceScore}
+      FROM businesses b
       LEFT JOIN category c ON b.category_id = c.id
       LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
       WHERE b.is_verified = 1 AND (${searchConditions})
+      ORDER BY relevance DESC, b.name ASC
       LIMIT ? OFFSET ?
     `;
 
     const countQuery = `
-      SELECT COUNT(*) as total FROM businesses b
+      SELECT COUNT(*) as total 
+      FROM businesses b
       LEFT JOIN category c ON b.category_id = c.id
       LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
       WHERE b.is_verified = 1 AND (${searchConditions})
     `;
 
-    const [dataRows] = await pool.query(searchQuery, [...searchValues, limit, offset]);
+    const [dataRows] = await pool.query(searchQuery, [
+      `%${q}%`, // relevance for name
+      `%${q}%`, `%${q}%`, // relevance for category/subcategory
+      `%${q}%`, // description
+      `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, // address/landmark/area/sector
+      `%${q}%`, `%${q}%`, // email/phone
+      ...searchValues,     // main search conditions
+      limit,
+      offset
+    ]);
+
     const [[countResult]] = await pool.query(countQuery, searchValues);
 
     const total = countResult.total;
@@ -486,6 +509,7 @@ export const globalSearchBusinesses = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
 
 
 // upload img for business
