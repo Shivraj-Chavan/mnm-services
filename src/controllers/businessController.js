@@ -437,12 +437,6 @@ export const globalSearchBusinesses = async (req, res) => {
     const searchFields = [
       "b.name",
       "b.description",
-      "b.address",
-      "b.landmark",
-      "b.area",
-      "b.sector",
-      "b.email",
-      "b.phone",
       "c.name",
       "sc.name"
     ];
