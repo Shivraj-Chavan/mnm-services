@@ -455,8 +455,6 @@ export const globalSearchBusinesses = async (req, res) => {
         WHEN b.name LIKE ? THEN 5
         WHEN c.name LIKE ? OR sc.name LIKE ? THEN 4
         WHEN b.description LIKE ? THEN 3
-        WHEN b.address LIKE ? OR b.landmark LIKE ? OR b.area LIKE ? OR b.sector LIKE ? THEN 2
-        WHEN b.email LIKE ? OR b.phone LIKE ? THEN 1
         ELSE 0
       END AS relevance
     `;
@@ -484,9 +482,7 @@ export const globalSearchBusinesses = async (req, res) => {
     const [dataRows] = await pool.query(searchQuery, [
       `%${q}%`, // relevance for name
       `%${q}%`, `%${q}%`, // relevance for category/subcategory
-      `%${q}%`, // description
-      `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, // address/landmark/area/sector
-      `%${q}%`, `%${q}%`, // email/phone
+      `%${q}%`, // relevance for description
       ...searchValues,     // main search conditions
       limit,
       offset
