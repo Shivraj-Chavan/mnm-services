@@ -10,7 +10,7 @@ export const getSubcategoriesByCategorySlug = async (req, res) => {
       FROM subcategory s
       JOIN category c ON s.category_id = c.id
       WHERE c.slug = ?
-      ORDER BY s.id;
+      ORDER BY s.sequence ASC, s.name ASC;
     `;
 
     const [subcategories] = await pool.query(query, [slug]);

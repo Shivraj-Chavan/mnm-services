@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllUsers, getMyProfile, updateUserProfile,createUser, globalSearchUsers, userSearchSuggestions } from "../controllers/userController.js";
+import { getAllUsers, getMyProfile, updateUserProfile,createUser, globalSearchUsers, userSearchSuggestions,updatemyProfile} from "../controllers/userController.js";
 import { validateUser } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -13,7 +13,6 @@ router.put("/:id/profile", updateUserProfile);
 router.post("/users", createUser);
 router.get("/search", globalSearchUsers);
 router.get("/suggestions", userSearchSuggestions);
-
-
+router.put("/profile", validateUser, updatemyProfile);
 
 export default router;

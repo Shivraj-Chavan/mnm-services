@@ -21,8 +21,8 @@ export const sendOtpViaEmail = async (email, otp) => {
         <p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>
         <p>Thank you,<br/>majhinavimumbai</p>
       </div>
-    `,
-  };
+        `,
+      };
 
   try {
     const info = await transporter.sendMail(mailOptions);

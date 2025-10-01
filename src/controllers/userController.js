@@ -24,19 +24,6 @@ const generateToken = (id) => {
 // };
 
 export const updateUserProfile = async (req, res) => {
-  // try {
-    // const user = await User.findByPk(req.user.id);
-    // if (!user) return res.status(404).json({ msg: "User not found" });
-
-    // user.name = req.body.name || user.name;
-    // user.phone = req.body.phone || user.phone;
-
-    // if (req.body.password) {
-    //   user.password = await bcrypt.hash(req.body.password, 10);
-    // }
-
-    // await user.save();
-
     try {
       const { id } = req.params;
       const { name, phone, email, is_active } = req.body;
@@ -150,42 +137,6 @@ export const getMyProfile = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
-// export const blockUser = (req, res) => {
-//   const id = req.params.id;
-
-//   if (!id) {
-//     return res.status(400).json({ message: 'User ID is required' });
-//   }
-
-//   const query = 'UPDATE users SET status = ? WHERE id = ?';
-
-//   pool.query(query, ['blocked', id], (error, results) => {
-//     if (error) {
-//       console.error('Database error:', error);
-//       return res.status(500).json({ message: 'Error blocking user', error });
-//     }
-
-//     if (results.affectedRows === 0) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     return res.status(200).json({ message: 'User blocked successfully' });
-//   });
-// };
-
-
-// export const deleteUser = async (req, res) => {
-//   try {
-//     const user = await User.findByPk(req.params.id);
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-
-//     await user.destroy();
-//     res.status(200).json({ msg: "User deleted successfully" });
-//   } catch (error) {
-//     res.status(500).json({ msg: "Server error", error: error.message });
-//   }
-// };
 
 // Post
 export const createUser = async (req, res) => {
@@ -325,4 +276,27 @@ export const userSearchSuggestions = async (req, res) => {
     return res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+
+
+export const updatemyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; //  comes from JWT middleware
+    const { name, email } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ msg: "Name is required" });
+    }
+
+    await pool.query(
+      `UPDATE users SET name = ?, email = ? WHERE id = ?`,
+      [name, email || null, userId]
+    );
+
+    return res.status(200).json({ msg: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json({ msg: "Failed to update profile", error: error.message });
+  }
+};
+
 

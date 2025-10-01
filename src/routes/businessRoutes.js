@@ -13,10 +13,13 @@ import {
   getBusinessImages
 } from "../controllers/businessController.js";
 import { validateUser,validateAdmin } from "../middlewares/auth.js";
+import { dynamicPlanBasedUpload } from "../middlewares/uploadmiddleware.js";
 import {upload} from "../middlewares/upload.js";
+import { getBusinessPlansStatus } from "../controllers/planController.js";
 
 const router = express.Router();
 router.get("/", getBusinesses); 
+router.get('/payments',getBusinessPlansStatus);
 router.get("/s/:slug",getBusinessBySlug)
 router.get("/search",globalSearchBusinesses)
 router.get("/user",validateUser, getBusinessByUserId);
@@ -25,12 +28,12 @@ router.post("/",validateUser, createBusiness);
 router.put("/:id",validateUser, updateBusiness);  //Admin updates business directly
 router.delete("/:id",validateUser,deleteBusiness);
 router.get("/:id/photos", getBusinessImages); 
-router.post("/:businessId/photos",upload.array("photos", 2), uploadPhotosForBusiness);
+router.post("/:businessId/photos",dynamicPlanBasedUpload, uploadPhotosForBusiness);
 router.delete('/:id/photos',deleteImages);
 
  // owner submits edit
 router.put('/update/:id', validateUser, submitBusinessUpdate); //Owner submits business update
-router.post('/update/:id/photos', upload.array("photos", 2), uploadUpdatePhotos); // owner uploads photos
+router.post('/update/:id/photos', dynamicPlanBasedUpload, uploadUpdatePhotos); // owner uploads photos
 
 
 // ADMIN routes

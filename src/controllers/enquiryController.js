@@ -92,12 +92,12 @@ export const getAllEnquiriesForOwner = async (req, res) => {
 // All enquiries
 export const getAllEnquiriesForAdmin = async (req, res) => {
   try {
-    // ✅ Get pagination params
+    // Get pagination params
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
     
-        // ✅ Get total count
+        // Get total count
         const [countRows] = await pool.query(` SELECT COUNT(*) AS total FROM enquiries`);
         const total = countRows[0].total;
         const totalPages = Math.ceil(total / limit);

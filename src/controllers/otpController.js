@@ -4,92 +4,6 @@ import crypto from "crypto";
 import jwt from 'jsonwebtoken';
 // import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 
-// import twilio from 'twilio';
-
-// const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-// const sendViaTwilio = async (phone, otp) => {
-//   try {
-//     const message = await client.messages.create({
-//       body: `Your OTP is ${otp}`,
-//       from: process.env.TWILIO_PHONE_NUMBER,
-//       to: `+91${phone}`
-//     });
-//     console.log("OTP sent via Twilio:", message.sid);
-//     return message;
-//   } catch (error) {
-//     console.error("Error sending OTP via Twilio:", error.message);
-//     throw new Error("Failed to send OTP via SMS");
-//   }
-// };
-
-// const sendViaFast2SMS = async (phone, otp) => {
-//   const apiKey = process.env.FAST2SMS_API_KEY;
-
-//   const payload = {
-//     sender_id: 'FSTSMS',
-//     message: `Your OTP is ${otp}. Do not share it with anyone.`,
-//     language: 'english',
-//     route: 'p',
-//     numbers: phone,
-//     // template_id: 'your_dlt_template_id' // if using DLT template
-//   };
-
-//   try {
-//     console.log("Sending SMS with payload:", payload);
-
-//     const response = await axios.post('https://www.fast2sms.com/dev/bulkV2', payload, {
-//       headers: {
-//         authorization: apiKey,
-//         'Content-Type': 'application/json',
-//       },
-//     });
-
-//     console.log("Fast2SMS Response:", response.data);
-//     return response.data;
-//   } catch (error) {
-//     console.error("Fast2SMS Error:", {
-//       status: error.response?.status,
-//       data: error.response?.data,
-//       message: error.message,
-//     });
-//     throw new Error("Failed to send OTP via Fast2SMS");
-//   }
-// };
-
-// const sendViaTextLocal = async (phone, otp) => {
-//   const apiKey = process.env.TEXTLOCAL_API_KEY;
-//   const sender = process.env.TEXTLOCAL_SENDER || 'TXTLCL'; // DLT Sender ID or default
-//   const message = `Your OTP is ${otp}. Do not share it with anyone.`;
-
-//   const data = {
-//     apikey: apiKey,
-//     numbers: `91${phone}`, 
-//     message,
-//     sender,
-//   };
-
-//   try {
-//     const response = await axios.post( 'https://api.textlocal.in/send/', querystring.stringify(data), 
-//       {
-//         headers: {
-//           'Content-Type': 'application/x-www-form-urlencoded',
-//         },
-//       }
-//     );
-
-//     console.log('TextLocal response:', response.data);
-//     if (response.data.status !== 'success') {
-//       throw new Error(response.data.warnings?.[0]?.message || 'SMS failed');
-//     }
-
-//     return response.data;
-//   } catch (error) {
-//     console.error('TextLocal Error:', error.response?.data || error.message);
-//     throw new Error('Failed to send OTP via TextLocal');
-//   }
-// };
-
 const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
 
 const sendOtpViaMSG91 = async (phone, otp) => {
@@ -224,19 +138,17 @@ export const verifyOTP = async (req, res) => {
       await conn.beginTransaction();
 
       const [[existingUser]] = await conn.query(
-        `SELECT id, role FROM users WHERE phone = ? LIMIT 1`,
+        `SELECT id, role,name,email FROM users WHERE phone = ? LIMIT 1`,
         [phone]
       );
 
-      if (existingUser?.is_verified) {
-        return res.status(400).json({ msg: "Your phone number is already verified." });
-      }
-
-      let userId, role;
+      
+      let userId,userName, role,userEmail;
       if (existingUser) {
         userId = existingUser.id;
         role = existingUser.role;
-
+        userName=existingUser.name
+        userEmail=existingUser.email
       } else {
         const [result] = await conn.query(
           `INSERT INTO users (name, phone, role) VALUES (?, ?, 'user')`,
@@ -244,14 +156,14 @@ export const verifyOTP = async (req, res) => {
         );
         userId = result.insertId;
         role = "user";
+        userEmail=result.email
+        userName=''
       }
 
       await conn.commit();
       conn.release();
-
       const token = jwt.sign({ userId, phone, role }, process.env.JWT_SECRET, {expiresIn: "15d",});
-
-      return res.status(200).json({ msg: "OTP verified successfully", role, token });
+      return res.status(200).json({ msg: "OTP verified successfully", role, token, name:userName,userEmail });
     } catch (err) {
       await conn.rollback();
       throw err;

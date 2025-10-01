@@ -32,7 +32,7 @@ export const createBusiness = async (req, res) => {
   console.log("CREating business")
   try {
     const userId = req.user.id; 
-    const {
+    const{
       owner_id: providedOwnerId,
       name,
       category_id,
@@ -45,11 +45,25 @@ export const createBusiness = async (req, res) => {
       phone,
       wp_number,
       email,
+      description,
       website,
       timing,
+      latitude, 
+      longitude,
     } = req.body;
     const owner_id = providedOwnerId || userId;
     const slug = await getUniqueSlug(name, area);
+
+    // Ensure latitude and longitude are numbers or null
+    const latValue = latitude ? parseFloat(latitude) : null;
+    const lngValue = longitude ? parseFloat(longitude) : null;
+
+    console.log( {
+      latitude: latValue,
+      longitude: lngValue,
+    });
+
+
     const values = [
       owner_id ?? null,
       name ?? null,
@@ -63,17 +77,21 @@ export const createBusiness = async (req, res) => {
       phone ?? null,
       wp_number ?? null,
       email ?? null,
+      description ?? null,
       website ?? null,
       JSON.stringify(timing ?? []),
       slug,
+      latValue,
+      lngValue,
     ];
+    console.log("Final Data to Insert into DB:", values);
 
     const query = `
       INSERT INTO businesses (
         owner_id, name, category_id, subcategory_id, 
         pin_code, address, landmark, sector, area, 
-        phone, wp_number, email, website, timing ,slug
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+        phone, wp_number, email, description,  website, timing ,slug , latitude, longitude 
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?)
     `;
 
     const [result] = await pool.query(query, values);
@@ -119,6 +137,7 @@ export const getBusinessById = async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ msg: "Business not found or owner is inactive" });
     }
+    console.log("Business fetched:", rows[0]);
 
     res.status(200).json(rows[0]);
   } catch (error) {
@@ -149,14 +168,20 @@ export const updateBusiness = async (req, res) => {
       phone = null,
       wp_number = null,
       email = null,
+      description=null,
       website = null,
-      timings = [],
+      timing = [],
       is_verified = false,
-      description=null
+      latitude = null,
+      longitude = null,
     } = req.body;
     console.log("Request Body:", req.body);
 
     const slug = await getUniqueSlug(name, area, id);
+
+      // Parse to floats for DB safety
+      const latValue = latitude ? parseFloat(latitude) : null;
+      const lngValue = longitude ? parseFloat(longitude) : null;
 
      // Admin updates directly
     if (role === "admin") {
@@ -176,11 +201,13 @@ export const updateBusiness = async (req, res) => {
           phone = ?, 
           wp_number = ?, 
           email = ?, 
+          description = ?,
           website = ?, 
           timing = ?, 
           slug = ?,
           is_verified = ?,
-          description = ?
+          latitude = ?,
+          longitude = ? 
         WHERE id = ?`,
         [
           owner_id,
@@ -195,11 +222,14 @@ export const updateBusiness = async (req, res) => {
           phone,
           wp_number,
           email,
+          description,
           website,
-          JSON.stringify(timings),
+          
+    typeof timing === "string" ? timing : JSON.stringify(timing),,
           slug,
           is_verified,
-          description,
+          latValue,          
+          lngValue,          
           id,
         ]
       );
@@ -221,8 +251,8 @@ export const updateBusiness = async (req, res) => {
       await pool.execute(
         `INSERT INTO update_businesses (
           business_id, owner_id, name, category_id, subcategory_id, pin_code, address,
-          landmark, sector, area, phone, wp_number, email, website, timing, slug, is_verified, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+          landmark, sector, area, phone, wp_number, email, description, website, timing, slug, latitude, longitude, is_verified, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           id,
           userId,
@@ -237,9 +267,12 @@ export const updateBusiness = async (req, res) => {
           phone,
           wp_number,
           email,
+          description,
           website,
-          JSON.stringify(timings),
+          JSON.stringify(timing),
           slug,
+          latValue,
+          lngValue,
           is_verified,
         ]
       );
@@ -421,10 +454,28 @@ export const getBusinesses = async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
+// Node-to-pincode mapping
+const nodePinCodes = {
+  "Airoli Node": ["400708", "400701"],
+  "Ghansoli Node": ["400701", "400706"],
+  "Kopar Khairane Node": ["400709", "400703"],
+  "Vashi – Sanpada – Turbhe": ["400703", "400705"],
+  "Nerul Node": ["400706", "400705"],
+  "Seawoods – CBD Belapur": ["400706", "400614"],
+  "Kharghar Node": ["410210", "410208"],
+  "Kamothe – Kalamboli": ["410209", "410218"],
+  "Taloja Node": ["410208", "410210"],
+  "Panvel Region": ["410206"],
+  "Ulwe Node": ["410206"],
+  "Dronagiri Node (JNPT belt)": ["400707"],
+  "Uran Town & Surrounding Villages": ["400702"]
+};
+
 export const globalSearchBusinesses = async (req, res) => {
   try {
-    let { q = "", page = 1, limit = 10 } = req.query;
+    let { q = "", location = "", page = 1, limit = 10 } = req.query;
     q = q.trim();
+    location = location.trim();
 
     if (!q) {
       return res.status(400).json({ msg: "Search query is required" });
@@ -444,6 +495,16 @@ export const globalSearchBusinesses = async (req, res) => {
     const searchConditions = searchFields.map(field => `${field} LIKE ?`).join(" OR ");
     const searchValues = new Array(searchFields.length).fill(`%${q}%`);
 
+    // Location → pin codes filter
+    let locationCondition = "";
+    let locationValues = [];
+    if (location && nodePinCodes[location]) {
+      const pins = nodePinCodes[location];
+      const placeholders = pins.map(() => "?").join(",");
+      locationCondition = ` AND b.pin_code IN (${placeholders})`;
+      locationValues = pins;
+    }
+
     const relevanceScore = `
       CASE 
         WHEN b.name LIKE ? THEN 5
@@ -461,6 +522,7 @@ export const globalSearchBusinesses = async (req, res) => {
       LEFT JOIN category c ON b.category_id = c.id
       LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
       WHERE b.is_verified = 1 AND (${searchConditions})
+      ${locationCondition}
       ORDER BY relevance DESC, b.name ASC
       LIMIT ? OFFSET ?
     `;
@@ -471,6 +533,7 @@ export const globalSearchBusinesses = async (req, res) => {
       LEFT JOIN category c ON b.category_id = c.id
       LEFT JOIN subcategory sc ON b.subcategory_id = sc.id
       WHERE b.is_verified = 1 AND (${searchConditions})
+      ${locationCondition}
     `;
 
     const [dataRows] = await pool.query(searchQuery, [
@@ -478,11 +541,15 @@ export const globalSearchBusinesses = async (req, res) => {
       `%${q}%`, `%${q}%`, // relevance for category/subcategory
       `%${q}%`, // relevance for description
       ...searchValues,     // main search conditions
+      ...locationValues,   // pin codes for location
       limit,
       offset
     ]);
 
-    const [[countResult]] = await pool.query(countQuery, searchValues);
+    const [[countResult]] = await pool.query(countQuery, [
+      ...searchValues,
+      ...locationValues
+    ]);
 
     const total = countResult.total;
     const totalPages = Math.ceil(total / limit);
@@ -602,7 +669,7 @@ export const getBusinessByUserId = async (req, res) => {
       "SELECT * FROM businesses WHERE owner_id = ?",
       [userId]
     );
-
+    console.log({"bsuinessRow":businessRows})
     if (businessRows.length === 0) {
       return res.status(404).json({ msg: "No businesses found for this user" });
     }
@@ -687,9 +754,14 @@ export const submitBusinessUpdate = async (req, res) => {
     if (user.role === 'admin') {
       return res.status(403).json({ msg: "Admins must update directly" });
     }
+
+        // Parse and validate latitude/longitude
+        const latValue = data.latitude ? parseFloat(data.latitude) : null;
+        const lngValue = data.longitude ? parseFloat(data.longitude) : null;
+    
     await pool.query(
-      `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, slug)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `REPLACE INTO update_businesses  (id, owner_id, name, description, timing, website, address, area, landmark, sector, pin_code, phone, wp_number, category_id, subcategory_id, email, latitude, longitude, slug,is_verified)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?,?)`,
       [
         businessId,
         data.owner_id,
@@ -707,8 +779,11 @@ export const submitBusinessUpdate = async (req, res) => {
         data.category_id,
         data.subcategory_id,
         data.email ?? null,
-        0, 
+        // 0, 
+        latValue,
+        lngValue,
         data.slug ?? null,
+        data.is_verified
       ]
     ); 
     
@@ -831,7 +906,8 @@ export const approveUpdate = async (req, res) => {
      
     // Update the original business in businesses with the new data.
     await pool.query(
-      `UPDATE businesses SET  name=?, description=?, timing=?, website=?, phone=?, wp_number=?, address=?, area=?, landmark=?, sector=?, pin_code=?, category_id=?, subcategory_id=?, email=?, slug=?, owner_id=? WHERE id=?`,
+      `UPDATE businesses SET  name=?, description=?, timing=?, website=?, phone=?, wp_number=?, address=?, area=?, landmark=?, sector=?, pin_code=?, category_id=?, subcategory_id=?, email=?, slug=?, owner_id=?,   latitude=?, longitude=? 
+ WHERE id=?`,
       [
         pending.name,
         pending.description,
@@ -849,6 +925,8 @@ export const approveUpdate = async (req, res) => {
         pending.email,
         await getUniqueSlug(pending.name, pending.area, id), 
         pending.owner_id,
+        pending.latitude ? parseFloat(pending.latitude) : null,
+        pending.longitude ? parseFloat(pending.longitude) : null,
         id
       ]
     );
