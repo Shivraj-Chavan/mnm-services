@@ -17,7 +17,7 @@ export const getDashboardStats = async (req, res) => {
     const [contacts] = await pool.query("SELECT COUNT(*) AS count FROM contact_us");
     // console.log("contacts", JSON.stringify(contacts, null, 2));
 
-    const [reviewDelete] = await pool.query("SELECT COUNT(*) AS count FROM reviews");
+    const [reviewDelete] = await pool.query("SELECT COUNT(*) AS count FROM reviews where delete_query=1");
     // console.log("reviewDelete", JSON.stringify(reviewDelete, null, 2));
 
     const [enquiries] = await pool.query("SELECT COUNT(*) AS count FROM enquiries");
