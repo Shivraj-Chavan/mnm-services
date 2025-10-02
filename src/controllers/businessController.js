@@ -787,7 +787,7 @@ export const submitBusinessUpdate = async (req, res) => {
       ]
     ); 
     
-    await pool.query("DELETE FROM update_business_images WHERE business_id = ?", [businessId]);
+    // await pool.query("DELETE FROM update_business_images WHERE business_id = ?", [businessId]);
     console.log("Old update images deleted for business:", businessId);
 
     res.json({ msg: "Update submitted for review" });
@@ -933,17 +933,29 @@ export const approveUpdate = async (req, res) => {
     console.log("Replacing existing business images...");
 
     // Delete old image
-    await pool.query(`DELETE FROM business_images WHERE business_id = ?`, [id]);
-    if (images.length > 0) {
-      const imageData = images.map((img) => [id, img.image_url]);
+    // await pool.query(`DELETE FROM business_images WHERE business_id = ?`, [id]);
+    // if (images.length > 0) {
+    //   const imageData = images.map((img) => [id, img.image_url]);
 
-      // Insert new approved images
+    //   // Insert new approved images
+    //   await pool.query(`INSERT INTO business_images (business_id, image_url) VALUES ?`, [imageData]);
+    //   console.log("New images added:", images.length);
+    // }else {
+    //   console.log("No new images provided.");
+    // }
+    if (images.length > 0) {
+      console.log("Replacing existing business images...");
+    
+      // Delete old images only if new ones are present
+      // await pool.query(`DELETE FROM business_images WHERE business_id = ?`, [id]);
+    
+      const imageData = images.map((img) => [id, img.image_url]);
       await pool.query(`INSERT INTO business_images (business_id, image_url) VALUES ?`, [imageData]);
       console.log("New images added:", images.length);
-    }else {
-      console.log("No new images provided.");
+    } else {
+      console.log("No new images provided — keeping existing images.");
     }
-
+    
     // Clean up pending update
     await pool.query(`DELETE FROM update_businesses WHERE id = ?`, [id]);
     await pool.query(`DELETE FROM update_business_images WHERE business_id = ?`, [id]);
