@@ -46,13 +46,14 @@ export const validateUser = async (req, res, next) => {
 export const validateAdmin = async (req, res, next) => {
   try {
     let user = await decodeDataAndReturnUserData(req);
-    if (user.role === 'admin') {
+    if (['admin', 'sub-admin'].includes(user.role.toLowerCase())) {
+      req.user = user;
       next();
     } else {
-      return res.status(403).json({ msg: "Unauthorized access, admin privileges required" });
+      return res.status(401).json({ msg: "Unauthorized access, admin privileges required" });
     }
   } catch (error) {
     console.error("Error validating token:", error);
-    return res.status(500).json({ msg: "Server error", error: error.message });
+    return res.status(401).json({ msg: "Server error", error: error.message });
   }
 }

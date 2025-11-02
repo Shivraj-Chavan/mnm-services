@@ -141,7 +141,10 @@ export const getMyProfile = async (req, res) => {
 // Post
 export const createUser = async (req, res) => {
   const { name, phone, email } = req.body;
+  const user = req.user;
 
+  // console.log(adminId);
+  
   // Validations
   if (!phone || !/^\d{10}$/.test(phone)) {
     return res.status(400).json({ message: "Phone must be 10 digits." });
@@ -157,12 +160,25 @@ export const createUser = async (req, res) => {
       return res.status(409).json({ message: "Phone number already registered." });
     }
 
-    await pool.query(
+    const [result] = await pool.query(
       "INSERT INTO users (name, phone, email, is_active) VALUES (?, ?, ?, ?)",
       [name || null, phone, email || null, 1]
     );
 
-    res.status(201).json({ message: "User created successfully" });
+    const newUserId = result.insertId;
+
+    // log admin action
+    if (user.role === 'sub-admin') {
+      await pool.query(
+        `INSERT INTO admin_actions (admin_id, action, target_type, target_id, created_at) VALUES (?, ?, ?, ?, ?)`,
+        [user.id, "Created New User", "User", newUserId, new Date()]
+      );
+      console.log("Admin action logged for sub-admin");
+    } else {
+      console.log("Super-admin action ignored in admin_actions table");
+    }
+
+    res.status(201).json({ message: "User created successfully", id: newUserId });
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ message: "Internal server error" });

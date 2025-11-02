@@ -10,7 +10,9 @@ import {
   getBusinessByUserId,
   deleteImages, submitBusinessUpdate, uploadUpdatePhotos, getPendingUpdates, approveUpdate, rejectUpdate,
   globalSearchBusinesses,
-  getBusinessImages
+  getBusinessImages,
+  exportBusinesses,
+  getAdminActions,exportAdminActions
 } from "../controllers/businessController.js";
 import { validateUser,validateAdmin } from "../middlewares/auth.js";
 import { dynamicPlanBasedUpload } from "../middlewares/uploadmiddleware.js";
@@ -19,6 +21,8 @@ import { getBusinessPlansStatus } from "../controllers/planController.js";
 
 const router = express.Router();
 router.get("/", getBusinesses); 
+router.get("/export",validateAdmin, exportBusinesses);
+router.get("/exportActions",validateAdmin,exportAdminActions)
 router.get('/payments',getBusinessPlansStatus);
 router.get("/s/:slug",getBusinessBySlug)
 router.get("/search",globalSearchBusinesses)
@@ -40,5 +44,6 @@ router.post('/update/:id/photos', dynamicPlanBasedUpload, uploadUpdatePhotos); /
 router.get('/admin/pending', validateUser, validateAdmin, getPendingUpdates);
 router.put('/admin/approve/:id', validateUser, validateAdmin, approveUpdate);
 router.delete('/admin/reject/:id', validateUser, validateAdmin, rejectUpdate);
+router.get("/admin/actions",validateAdmin, getAdminActions);
 
 export default router;

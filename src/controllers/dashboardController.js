@@ -42,3 +42,26 @@ export const getDashboardStats = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 }
+
+// Subadmin tracking Stats
+export const getDailySubadminStats = async (req, res) => {
+  try {
+    const [results] = await pool.query(
+      `SELECT u.id AS admin_id, u.name AS admin_name,
+              SUM(CASE WHEN a.action = 'Approved business update' THEN 1 ELSE 0 END) AS approved_businesses,
+              SUM(CASE WHEN a.action = 'Registered user' THEN 1 ELSE 0 END) AS registered_users
+       FROM admin_actions a
+       JOIN users u ON u.id = a.admin_id
+       WHERE u.role = 'subadmin'
+         AND DATE(a.created_at) = CURDATE()
+       GROUP BY u.id, u.name
+       ORDER BY approved_businesses DESC`
+    );
+
+    res.json({ subadminStats: results || [] });
+  } catch (err) {
+    console.error("Error fetching daily subadmin stats:", err);
+    res.status(500).json({ message: "Error fetching subadmin stats", error: err.message });
+  }
+};
+

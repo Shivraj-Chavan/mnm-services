@@ -2,6 +2,7 @@ import axios from "axios";
 import pool from "../config/db.js";
 import crypto from "crypto";
 import jwt from 'jsonwebtoken';
+import { smsUserRegistered } from "../utils/sendSms.js";
 // import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 
 const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
@@ -61,7 +62,7 @@ export const sendOTP = async (req, res) => {
 
      // Send OTP using Nodemailer
     //  await sendOtpViaEmail(phone, otp);
-    await sendOtpViaMSG91 (phone,otp);
+    // await sendOtpViaMSG91 (phone,otp);
 
     const OTP_EXPIRY_MINUTES = parseInt(process.env.OTP_EXPIRY_MINUTES) || 5;
 
@@ -87,7 +88,7 @@ export const sendOTP = async (req, res) => {
     // console.log(`Generated OTP for ${phone}: ${otp}`);    
     // await sendViaFast2SMS(phone, otp); 
     // await sendViaTextLocal (phone,otp);
-    // await sendOtpViaMSG91 (phone,otp);
+    await sendOtpViaMSG91 (phone,otp);
 
     const conn = await pool.getConnection();
     try {
@@ -162,7 +163,30 @@ export const verifyOTP = async (req, res) => {
 
       await conn.commit();
       conn.release();
-      const token = jwt.sign({ userId, phone, role }, process.env.JWT_SECRET, {expiresIn: "15d",});
+      let expiresIn = "15d";
+
+        if (role === "sub-admin") {
+          expiresIn = "12h";
+        }
+    
+        const token = jwt.sign(
+          { userId, phone, role },
+          process.env.JWT_SECRET,
+          { expiresIn }
+        );
+
+        // Send SMS vis Phone Number
+        await smsUserRegistered(phone);
+        return res.status(200).json({
+          success: true,
+          message: "OTP verified and user registered successfully",
+          role,
+          token,
+          name: userName,
+          userEmail
+        });
+
+      // const token = jwt.sign({ userId, phone, role }, process.env.JWT_SECRET, {expiresIn: "15d",});
       return res.status(200).json({ msg: "OTP verified successfully", role, token, name:userName,userEmail });
     } catch (err) {
       await conn.rollback();
