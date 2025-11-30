@@ -266,9 +266,21 @@ export const updateBusiness = async (req, res) => {
         return res.status(404).json({ msg: "Business not found or nothing to update" });
       }
 
-      // Log admin/subadmin action
+      // Log subadmin action
+      if (user.role === "sub-admin") {
       const actionText = is_verified ? "Verified business" : "Updated business";
       await logAdminAction(userId, actionText, "Business", id);
+      };
+
+      // const recipientPhone = phone || wp_number;
+      // if (recipientPhone) {
+      //   try {
+      //     const smsResponse = await sendSms("businessConfirmation", recipientPhone, {});
+      //     console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+      //   } catch (err) {
+      //     console.error("Failed to send BusinessRegistration SMS:", err.message);
+      //   }
+      // }
 
       // return res.status(200).json({ msg: "Business updated successfully by admin", slug });
       return res.status(200).json({
@@ -1138,7 +1150,6 @@ export const approveUpdate = async (req, res) => {
         pending.owner_id,
         pending.latitude ? parseFloat(pending.latitude) : null,
         pending.longitude ? parseFloat(pending.longitude) : null,
-        true,
         id
       ]
     );
