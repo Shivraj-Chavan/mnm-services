@@ -1115,7 +1115,7 @@ export const approveUpdate = async (req, res) => {
   try {
     const [[pending]] = await pool.query(`SELECT * FROM update_businesses WHERE id = ?`, [id]);
     console.log("Fetched pending update:", pending);
-    const [images] = await pool.query(`SELECT * FROM update_business_images WHERE id = ?`, [id]);
+    const [images] = await pool.query(`SELECT * FROM update_business_images WHERE business_id  = ?`, [id]);
     console.log("Fetched pending images:", images);
 
 
