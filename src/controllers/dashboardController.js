@@ -27,6 +27,33 @@ export const getDashboardStats = async (req, res) => {
     );
     // console.log("unviewedContacts", JSON.stringify(unviewedContacts, null, 2));
 
+    const [totalBusinesses] = await pool.query(`
+      SELECT COUNT(*) AS count
+      FROM businesses
+    `);
+    
+    const [todayBusinesses] = await pool.query(`
+      SELECT COUNT(*) AS count
+      FROM businesses
+      WHERE DATE(created_at)=CURDATE()
+    `);
+    
+    const [subAdmins] = await pool.query(`
+      SELECT COUNT(*) AS count
+      FROM users
+      WHERE role='subadmin'
+    `);
+    
+    const [dailyBusinessStats] = await pool.query(`
+      SELECT
+        DATE(created_at) AS date,
+        COUNT(*) AS count
+      FROM businesses
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+      LIMIT 30
+    `);
+
     return res.status(200).json({
       totalUsers: users[0].count,
       verifiedBusinesses: verifiedBusinesses[0].count,
@@ -36,6 +63,11 @@ export const getDashboardStats = async (req, res) => {
       reviewDeleteRequests: reviewDelete[0].count,
       businessEnquiries: enquiries[0].count,
       unviewedContacts: unviewedContacts[0].count,
+
+      totalBusinesses: totalBusinesses[0].count,
+      todayBusinesses: todayBusinesses[0].count,
+      subAdmins: subAdmins[0].count,
+      dailyBusinessStats,
     });
   } catch (err) {
     console.error("Dashboard stats error:", err);
@@ -65,3 +97,64 @@ export const getDailySubadminStats = async (req, res) => {
   }
 };
 
+
+export const getAdminStats = async (req, res) => {
+  try {
+    const { admin_id } = req.query;
+
+    const [[todayCreatedBusinesses]] = await pool.query(
+      `
+      SELECT COUNT(*) AS count
+      FROM admin_actions
+      WHERE admin_id = ?
+      AND action = 'Created business'
+      AND DATE(created_at) = CURDATE()
+      `,
+      [admin_id]
+    );
+
+    const [[totalCreatedBusinesses]] = await pool.query(
+      `
+      SELECT COUNT(*) AS count
+      FROM admin_actions
+      WHERE admin_id = ?
+      AND action = 'Created business'
+      `,
+      [admin_id]
+    );
+
+    console.log("admin_id", admin_id);
+
+    const [[todayCreatedUsers]] = await pool.query(
+      `
+      SELECT COUNT(*) AS count
+      FROM admin_actions
+      WHERE admin_id = ?
+      AND action IN ('Created user','Created New User')
+      AND DATE(created_at) = CURDATE()
+      `,
+      [admin_id]
+    );
+
+    const [[totalCreatedUsers]] = await pool.query(
+      `
+      SELECT COUNT(*) AS count
+      FROM admin_actions
+      WHERE admin_id = ?
+      AND action IN ('Created user','Created New User')
+      `,
+      [admin_id]
+    );
+
+    res.json({
+      totalCreatedBusinesses: totalCreatedBusinesses.count,
+      todayCreatedBusinesses: todayCreatedBusinesses.count,
+      totalCreatedUsers: totalCreatedUsers.count,
+      todayCreatedUsers: todayCreatedUsers.count,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
