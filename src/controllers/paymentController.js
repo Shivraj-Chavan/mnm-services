@@ -27,9 +27,9 @@ export const initiatePayment = async (req, res) => {
         VALUES (?, ?, ?, ?, ?, NOW())
       `;
       console.log("Insert Query:", insertQuery);
-      console.log(" Values:", [business_id, plan, 0, transactionId, "completed"]);
+      console.log(" Values:", [business_id, plan_id, 0, transactionId, "completed"]);
 
-      await pool.execute(insertQuery, [business_id, plan, 0,  transactionId, "completed"]);
+      await pool.execute(insertQuery, [business_id, plan_id, 0,  transactionId, "completed"]);
       console.log("Free plan inserted successfully.");
       return res.json({ success: true, message: "Free plan activated" });
     } catch (error) {
