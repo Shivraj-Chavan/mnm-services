@@ -2,7 +2,8 @@ import axios from "axios";
 import pool from "../config/db.js";
 import crypto from "crypto";
 import jwt from 'jsonwebtoken';
-import { smsUserRegistered } from "../utils/sendSms.js";
+// import { smsUserRegistered } from "../utils/sendSms.js";
+// import { sendSms } from "../utils/sendOtpviaPhone.js";
 // import { sendOtpViaEmail } from "../utils/sendOtpViaEmail.js";
 
 const normalizePhone = (phone) => phone.replace(/\D+/g, "").trim();
@@ -176,7 +177,8 @@ export const verifyOTP = async (req, res) => {
         );
 
         // Send SMS vis Phone Number
-        await smsUserRegistered(phone);
+        // await smsUserRegistered(phone);
+        // await sendSms("registration", phone, { name: userName || "User" });
         return res.status(200).json({
           success: true,
           message: "OTP verified and user registered successfully",
