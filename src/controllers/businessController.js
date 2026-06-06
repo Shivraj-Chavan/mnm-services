@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import ExcelJS from "exceljs";
 import { logAdminAction } from "../utils/logAdminAction.js";
 import { isAdminOrSubadmin } from "../utils/checkAdmin.js";
-import { sendSms } from "../utils/sendOtpviaPhone.js";
+// import { sendSms } from "../utils/sendOtpviaPhone.js";
 
 export const getUniqueSlug = async (name, area, excludeId = null) => {
   let baseSlug = slugify(`${name}-${area}`, { lower: true, strict: true });
@@ -118,15 +118,15 @@ export const createBusiness = async (req, res) => {
     }
 
     // Send Business Registration SMS
-    const recipientPhone = phone || wp_number;
-    if (recipientPhone) {
-      try {
-        const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
-        console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
-      } catch (err) {
-        console.error("Failed to send BusinessRegistration SMS:", err.message);
-      }
-    }
+    // const recipientPhone = phone || wp_number;
+    // if (recipientPhone) {
+    //   try {
+    //     const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
+    //     console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+    //   } catch (err) {
+    //     console.error("Failed to send BusinessRegistration SMS:", err.message);
+    //   }
+    // }
     
     res.status(201).json({ msg: "Business created successfully", id: newBusinessId });
   } catch (error) {
@@ -340,14 +340,14 @@ export const updateBusiness = async (req, res) => {
 
       // Send Business Registration SMS
     const recipientPhone = phone || wp_number;
-    if (recipientPhone) {
-      try {
-        const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
-        console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
-      } catch (err) {
-        console.error("Failed to send BusinessRegistration SMS:", err.message);
-      }
-    }
+    // if (recipientPhone) {
+    //   try {
+    //     const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
+    //     console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+    //   } catch (err) {
+    //     console.error("Failed to send BusinessRegistration SMS:", err.message);
+    //   }
+    // }
       return res.status(200).json({ msg: "Business update submitted for admin approval", slug });
     }
     
