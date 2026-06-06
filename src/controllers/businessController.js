@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import ExcelJS from "exceljs";
 import { logAdminAction } from "../utils/logAdminAction.js";
 import { isAdminOrSubadmin } from "../utils/checkAdmin.js";
+import { sendSms } from "../utils/sendOtpviaPhone.js";
 
 export const getUniqueSlug = async (name, area, excludeId = null) => {
   let baseSlug = slugify(`${name}-${area}`, { lower: true, strict: true });
@@ -116,6 +117,17 @@ export const createBusiness = async (req, res) => {
       console.log("Super-admin action ignored in admin_actions table");
     }
 
+    // Send Business Registration SMS
+    const recipientPhone = phone || wp_number;
+    if (recipientPhone) {
+      try {
+        const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
+        console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+      } catch (err) {
+        console.error("Failed to send BusinessRegistration SMS:", err.message);
+      }
+    }
+    
     res.status(201).json({ msg: "Business created successfully", id: newBusinessId });
   } catch (error) {
     console.log("BUSINESS create error ")
@@ -287,6 +299,7 @@ export const updateBusiness = async (req, res) => {
         msg: `Business ${is_verified ? "verified" : "updated"} successfully by ${role}`,
         slug,
       });
+
     } else {
       // Owner submit request for approval
       const [existing] = await pool.execute(`SELECT id FROM update_businesses WHERE id = ? AND is_verified = 0`, [id]);
@@ -324,6 +337,17 @@ export const updateBusiness = async (req, res) => {
         ]
       );
       console.log("Owner update inserted into update_businesses table.");
+
+      // Send Business Registration SMS
+    const recipientPhone = phone || wp_number;
+    if (recipientPhone) {
+      try {
+        const smsResponse = await sendSms("businessRegistration", recipientPhone, {});
+        console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+      } catch (err) {
+        console.error("Failed to send BusinessRegistration SMS:", err.message);
+      }
+    }
       return res.status(200).json({ msg: "Business update submitted for admin approval", slug });
     }
     
@@ -995,6 +1019,17 @@ export const submitBusinessUpdate = async (req, res) => {
     // await pool.query("DELETE FROM update_business_images WHERE business_id = ?", [businessId]);
     console.log("Old update images deleted for business:", businessId);
 
+    // Send Business Registration SMS
+    // const recipientPhone = phone || wp_number;
+    // if (recipientPhone) {
+    //   try {
+    //     const smsResponse = await sendSms("businessConfirmation", recipientPhone, {});
+    //     console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+    //   } catch (err) {
+    //     console.error("Failed to send BusinessRegistration SMS:", err.message);
+    //   }
+    // }
+
     res.json({ msg: "Update submitted for review" });
   } catch (err) {
     console.error(err);
@@ -1126,6 +1161,8 @@ export const approveUpdate = async (req, res) => {
     if (!["admin", "sub-admin"].includes(user?.role)) {
       return res.status(403).json({ msg: "Permission denied" });
     }
+
+    console.log({pending})
      
     // Update the original business in businesses with the new data.
     await pool.query(
@@ -1193,6 +1230,18 @@ export const approveUpdate = async (req, res) => {
     );
   };
 
+
+    // Send Business Registration SMS
+    // const recipientPhone = pending.phone || pending.wp_number;
+    // if (recipientPhone) {
+    //   try {
+    //     const smsResponse = await sendSms("businessConfirmation", recipientPhone, {});
+    //     console.log("SMS Response:", JSON.stringify(smsResponse, null, 2));
+    //   } catch (err) {
+    //     console.error("Failed to send BusinessRegistration SMS:", err.message);
+    //   }
+    // }
+
     res.json({ msg: "Business update approved" });
   } catch (err) {
     console.error("Error approving update:", err);
@@ -1253,6 +1302,7 @@ export const getAdminActions = async (req, res) => {
       search = "",
       startDate = "",
       endDate = "",
+      admin_id = "",
     } = req.query;
 
     const offset = (page - 1) * limit;
@@ -1270,6 +1320,11 @@ export const getAdminActions = async (req, res) => {
       )`);
       const searchValue = `%${search}%`;
       params.push(searchValue, searchValue, searchValue, searchValue);
+    }
+
+    if (admin_id) {
+      whereClauses.push(`aa.admin_id = ?`);
+      params.push(admin_id);
     }
 
     if (startDate && endDate) {
