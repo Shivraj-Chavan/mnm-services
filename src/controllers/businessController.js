@@ -170,6 +170,17 @@ export const getBusinessById = async (req, res) => {
       return res.status(404).json({ msg: "Business not found or owner is inactive" });
     }
     console.log("Business fetched:", rows[0]);
+    const [[subscription]] = await pool.query(
+      `SELECT plan
+       FROM payments
+       WHERE business_id = ?
+       AND status = 'completed'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [id]
+    );
+    
+    rows[0].plan = subscription?.plan || "free";
 
     res.status(200).json(rows[0]);
   } catch (error) {
@@ -397,6 +408,18 @@ export const getBusinessBySlug = async (req, res) => {
 
     const business = rows[0];
 
+    const [[subscription]] = await pool.query(
+      `SELECT plan
+       FROM payments
+       WHERE business_id = ?
+       AND status = 'completed'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [business.id]
+    );
+    
+    business.plan = subscription?.plan || "free";
+
     const [imageRows] = await pool.query(
       "SELECT id, image_url FROM business_images WHERE business_id = ?",
       [business.id]
@@ -430,9 +453,17 @@ export const getBusinesses = async (req, res) => {
     console.log('Offset:', offset);
 
     let isVerifiedValue = (isVerified === 'false' || isVerified === 0 || isVerified === '0') ? 0 : 1;
-    let query = `SELECT b.*, 
-                (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url
-              FROM businesses b
+    let query = `SELECT b.*,
+                    (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url,
+                    (
+                      SELECT plan
+                      FROM payments p
+                      WHERE p.business_id = b.id
+                      AND p.status = 'completed'
+                      ORDER BY p.id DESC
+                      LIMIT 1
+                    ) AS plan
+                    FROM businesses b
               WHERE b.is_verified = ?`;
     let values = [isVerifiedValue];
 
@@ -647,6 +678,14 @@ export const globalSearchBusinesses = async (req, res) => {
       mainQuery = `
         SELECT b.*,
           (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url,
+          (
+          SELECT plan
+          FROM payments p
+          WHERE p.business_id = b.id
+          AND p.status = 'completed'
+          ORDER BY p.id DESC
+          LIMIT 1
+        ) AS plan,
           (${selectRelevancePart}) AS relevance
         ${fromAndJoins}
         WHERE ${whereBase}
@@ -716,6 +755,14 @@ export const globalSearchBusinesses = async (req, res) => {
       const fallbackQuery = `
         SELECT b.*,
           (SELECT image_url FROM business_images WHERE business_id = b.id LIMIT 1) AS image_url,
+          (
+          SELECT plan
+          FROM payments p
+          WHERE p.business_id = b.id
+          AND p.status = 'completed'
+          ORDER BY p.id DESC
+          LIMIT 1
+        ) AS plan,
           (
             ((b.category_id = ?)*10) +
             ((b.subcategory_id = ?)*9) +
@@ -923,6 +970,20 @@ export const getBusinessByUserId = async (req, res) => {
         url: img.image_url,
       });
     });
+
+    for (const business of businessRows) {
+      const [[subscription]] = await pool.query(
+        `SELECT plan
+         FROM payments
+         WHERE business_id = ?
+         AND status = 'completed'
+         ORDER BY id DESC
+         LIMIT 1`,
+        [business.id]
+      );
+    
+      business.plan = subscription?.plan || "free";
+    }
 
     // Step 4: Attach images to each business
     const businesses = businessRows.map(b => ({
