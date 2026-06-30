@@ -6,6 +6,6 @@ const router = express.Router();
 router.get("/",validateAdmin, getDashboardStats);
 router.get("/daily-subadmin-stats",validateAdmin,getDailySubadminStats);
 // Admin-specific stats
-router.get("/admin-stats", getAdminStats);
+router.get("/admin-stats",validateAdmin, getAdminStats);
 
 export default router;
