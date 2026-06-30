@@ -303,8 +303,8 @@ export const getAdminStats = async (req, res) => {
   try {
     console.log({"req.query":req.query})
     console.log({"req.user.id":req.user.id})
-    const  admin_id  = req?.query?.admin_id || req?.user?.id;
-
+    const admin_id = req?.query?.admin_id ?? req?.user?.id;
+    
     if (!admin_id) {
       return res.status(400).json({
         message: "admin_id is required",
