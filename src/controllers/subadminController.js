@@ -103,12 +103,11 @@ export const createSubadmin = async (req, res) => {
       }
       const adminId = req.admin?.id || req.user?.id; 
       const [result] = await pool.execute(
-        "INSERT INTO users (name, phone, email, created_by , role) VALUES (?, ?, ?, ?,?)",
+        "INSERT INTO users (name, phone, email,  role) VALUES (?, ?, ?, ?)",
         [
           name || null,
           phone,
           email || null,
-          adminId,
           "sub-admin" 
         ]
       );
