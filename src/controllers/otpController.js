@@ -143,7 +143,7 @@ export const verifyOTP = async (req, res) => {
         `SELECT id, role,name,email FROM users WHERE phone = ? LIMIT 1`,
         [phone]
       );
-      if (existingUser?.is_blocked) {
+      if (!existingUser?.is_active) {
         await conn.rollback();
         return res.status(403).json({
           success: false,
