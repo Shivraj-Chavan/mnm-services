@@ -304,7 +304,15 @@ export const getAdminStats = async (req, res) => {
     console.log({"req.query":req.query})
     console.log({"req.user.id":req.user.id})
     const admin_id = req?.query?.admin_id ?? req?.user?.id;
+    const month = parseInt(req.query.month);
+    const year = parseInt(req.query.year);
     
+    const hasMonthYear =
+      !isNaN(month) &&
+      !isNaN(year) &&
+      month >= 1 &&
+      month <= 12;
+
     if (!admin_id) {
       return res.status(400).json({
         message: "admin_id is required",
@@ -342,10 +350,14 @@ export const getAdminStats = async (req, res) => {
       FROM admin_actions
       WHERE admin_id = ?
       AND action IN ('Created user','Created New User')
-      AND MONTH(created_at)=MONTH(CURDATE())
-      AND YEAR(created_at)=YEAR(CURDATE())
+      AND MONTH(created_at)=?
+      AND YEAR(created_at)=?
       `,
-      [admin_id]
+      [
+        admin_id,
+        hasMonthYear ? month : new Date().getMonth() + 1,
+        hasMonthYear ? year : new Date().getFullYear(),
+      ]
     );
 
     const [dailyUserStats] = await pool.query(
@@ -393,10 +405,14 @@ export const getAdminStats = async (req, res) => {
       FROM admin_actions
       WHERE admin_id = ?
       AND action = 'Created business'
-      AND MONTH(created_at)=MONTH(CURDATE())
-      AND YEAR(created_at)=YEAR(CURDATE())
+      AND MONTH(created_at)=?
+      AND YEAR(created_at)=?
       `,
-      [admin_id]
+      [
+        admin_id,
+        hasMonthYear ? month : new Date().getMonth() + 1,
+        hasMonthYear ? year : new Date().getFullYear(),
+      ]
     );
 
     const [dailyBusinessStats] = await pool.query(
