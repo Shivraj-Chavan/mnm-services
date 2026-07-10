@@ -1396,18 +1396,52 @@ export const getAdminActions = async (req, res) => {
     const whereSQL = whereClauses.join(" AND ");
 
     // Fetch actions
+    // const [actions] = await pool.query(
+    //   `
+    //   SELECT 
+    //     aa.id,
+    //     aa.admin_id,
+    //     u.name AS admin_name,
+    //     aa.action,
+    //     aa.target_type,
+    //     aa.target_id,
+    //     aa.created_at
+    //   FROM admin_actions aa
+    //   LEFT JOIN users u ON u.id = aa.admin_id
+    //   WHERE ${whereSQL}
+    //   ORDER BY aa.created_at DESC
+    //   LIMIT ? OFFSET ?
+    //   `,
+    //   [...params, parseInt(limit), parseInt(offset)]
+    // );
+
     const [actions] = await pool.query(
       `
-      SELECT 
+      SELECT
         aa.id,
         aa.admin_id,
         u.name AS admin_name,
+        u.role,
         aa.action,
         aa.target_type,
         aa.target_id,
+        b.name AS business_name,
+        tu.name AS target_user_name,
         aa.created_at
+    
       FROM admin_actions aa
-      LEFT JOIN users u ON u.id = aa.admin_id
+    
+      LEFT JOIN users u
+        ON u.id = aa.admin_id
+    
+      LEFT JOIN businesses b
+        ON aa.target_type = 'business'
+       AND aa.target_id = b.id
+    
+      LEFT JOIN users tu
+        ON aa.target_type = 'user'
+       AND aa.target_id = tu.id
+    
       WHERE ${whereSQL}
       ORDER BY aa.created_at DESC
       LIMIT ? OFFSET ?
@@ -1661,5 +1695,30 @@ export const exportAdminActions = async (req, res) => {
         message: "Failed to export admin actions",
         error: error.message,
       });
+  }
+};
+
+
+
+// ADMIN Fetch
+export const getAdminsList = async (req, res) => {
+  try {
+    const [admins] = await pool.query(`
+      SELECT id,name,role
+      FROM users
+      WHERE role IN ('sub-admin')
+      ORDER BY name ASC
+    `);
+    console.log(JSON.stringify(admins, null, 2));
+
+    res.json({
+      success: true,
+      admins,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

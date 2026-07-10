@@ -14,6 +14,7 @@ import countRoutes from "./countRoutes.js";
 import planRoutes from "./planRoutes.js";
 // import adminRoutes from "./adminRoutes.js";
 import dashboardRoutes from "./dashboardRoutes.js";
+import subadminRoutes from "./subadminRoutes.js";
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.use("/count",countRoutes);
 router.use("/payments", paymentRoutes);
 // router.use("/admin", adminRoutes);
 router.use("/plan", planRoutes);
-
 router.use("/dashboard",dashboardRoutes)
+router.use("/subadmin",subadminRoutes)
+
 export default router;

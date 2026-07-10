@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 
-
 // Submit contact form
 export const submitContactForm = async(req,res) =>{
     const {companyName, username, phone, enquiry} = req.body;
@@ -19,21 +18,20 @@ export const submitContactForm = async(req,res) =>{
       }
 }
 
-
 // Get all contact
 export const getAllContacts = async (req, res) => {
   try {
-    // ✅ Get pagination params
+    // Get pagination params
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // ✅ Get total count
+    // Get total count
     const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM contact_us`);
     const total = countRows[0].total;
     const totalPages = Math.ceil(total / limit);
 
-    // ✅ Fetch contacts (unviewed first, then viewed, both sorted by date)
+    // Fetch contacts (unviewed first, then viewed, both sorted by date)
     const [rows] = await pool.query(
       `SELECT * 
        FROM contact_us 
@@ -42,7 +40,7 @@ export const getAllContacts = async (req, res) => {
       [limit, offset]
     );
 
-    // ✅ Send response
+    // Send response
     res.status(200).json({
       contacts: rows,
       total,
