@@ -12,8 +12,17 @@ export const getAllSubadmins = async (req, res) => {
       limit = parseInt(limit, 10);
       const offset = (page - 1) * limit;
   
-      let baseQuery = "SELECT * FROM users WHERE role='sub-admin'";
-      const params = [];
+      let baseQuery = `
+      SELECT
+        users.*,
+        CASE
+          WHEN is_active = 1 THEN 0
+          ELSE 1
+        END AS is_blocked
+      FROM users
+      WHERE role='sub-admin'
+    `;
+          const params = [];
   
       // Search filter
       if (search) {
