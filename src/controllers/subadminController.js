@@ -129,7 +129,7 @@ export const createSubadmin = async (req, res) => {
 
   export const updateSubadmin = async (req, res) => {
     const { id } = req.params;
-    const { name, phone, email } = req.body;
+    const { name, phone, email ,is_blocked} = req.body;
   
     console.log("Controller: updateSubadmin", { id, name, phone, email });
   
@@ -190,13 +190,15 @@ export const createSubadmin = async (req, res) => {
         SET
           name = ?,
           phone = ?,
-          email = ?
+          email = ?,
+          is_active=?
         WHERE id = ? AND role = 'sub-admin'
         `,
         [
           name || null,
           phone,
           email || null,
+          is_blocked?0:1,
           id,
         ]
       );
