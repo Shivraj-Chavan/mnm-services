@@ -140,7 +140,7 @@ export const verifyOTP = async (req, res) => {
       await conn.beginTransaction();
 
       const [[existingUser]] = await conn.query(
-        `SELECT id, role,name,email FROM users WHERE phone = ? LIMIT 1`,
+        `SELECT id, role,name,email,is_active FROM users WHERE phone = ? LIMIT 1`,
         [phone]
       );
       if (!existingUser?.is_active) {
