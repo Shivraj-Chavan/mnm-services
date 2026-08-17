@@ -31,19 +31,19 @@ import pool from "../config/db.js";
 //       SELECT COUNT(*) AS count
 //       FROM businesses
 //     `);
-    
+
 //     const [todayBusinesses] = await pool.query(`
 //       SELECT COUNT(*) AS count
 //       FROM businesses
 //       WHERE DATE(created_at)=CURDATE()
 //     `);
-    
+
 //     const [subAdmins] = await pool.query(`
 //       SELECT COUNT(*) AS count
 //       FROM users
 //       WHERE role='subadmin'
 //     `);
-    
+
 //     const [dailyBusinessStats] = await pool.query(`
 //       SELECT
 //         DATE(created_at) AS date,
@@ -301,23 +301,131 @@ export const getDailySubadminStats = async (req, res) => {
 
 export const getAdminStats = async (req, res) => {
   try {
-    console.log({"req.query":req.query})
-    console.log({"req.user.id":req.user.id})
-    const admin_id = req?.query?.admin_id ?? req?.user?.id;
+    console.log({ "req.query": req.query })
+    console.log({ "req.user.id": req.user.id })
+    const admin_id = req?.query?.admin_id;
     const month = parseInt(req.query.month);
     const year = parseInt(req.query.year);
-    
+
     const hasMonthYear =
       !isNaN(month) &&
       !isNaN(year) &&
       month >= 1 &&
       month <= 12;
 
-    if (!admin_id) {
-      return res.status(400).json({
-        message: "admin_id is required",
-      });
-    }
+    // if (!admin_id) {
+    //   return res.status(400).json({
+    //     message: "admin_id is required",
+    //   });
+    // }
+
+    // If admin_id is NOT provided, return stats for all sub-admins
+
+    // If admin_id is NOT provided, return stats for ALL admins
+if (!admin_id) {
+  const currentMonth = hasMonthYear
+    ? month
+    : new Date().getMonth() + 1;
+
+  const currentYear = hasMonthYear
+    ? year
+    : new Date().getFullYear();
+
+  // ============================
+  // USERS
+  // ============================
+
+  const [[totalCreatedUsers]] = await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action IN ('Created user', 'Created New User')
+  `);
+
+  const [[todayCreatedUsers]] = await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action IN ('Created user', 'Created New User')
+    AND DATE(created_at) = CURDATE()
+  `);
+
+  const [[monthlyCreatedUsers]] = await pool.query(
+    `
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action IN ('Created user', 'Created New User')
+    AND MONTH(created_at) = ?
+    AND YEAR(created_at) = ?
+    `,
+    [currentMonth, currentYear]
+  );
+
+  const [dailyUserStats] = await pool.query(`
+    SELECT
+      DATE(created_at) AS date,
+      COUNT(*) AS count
+    FROM admin_actions
+    WHERE action IN ('Created user', 'Created New User')
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+  `);
+
+
+  // ============================
+  // BUSINESSES
+  // ============================
+
+  const [[totalCreatedBusinesses]] = await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action = 'Created business'
+  `);
+
+  const [[todayCreatedBusinesses]] = await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action = 'Created business'
+    AND DATE(created_at) = CURDATE()
+  `);
+
+  const [[monthlyCreatedBusinesses]] = await pool.query(
+    `
+    SELECT COUNT(*) AS count
+    FROM admin_actions
+    WHERE action = 'Created business'
+    AND MONTH(created_at) = ?
+    AND YEAR(created_at) = ?
+    `,
+    [currentMonth, currentYear]
+  );
+
+  const [dailyBusinessStats] = await pool.query(`
+    SELECT
+      DATE(created_at) AS date,
+      COUNT(*) AS count
+    FROM admin_actions
+    WHERE action = 'Created business'
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+  `);
+
+
+  // ============================
+  // SAME RESPONSE FORMAT
+  // ============================
+
+  return res.json({
+    totalUsers: totalCreatedUsers.count,
+    todayUsers: todayCreatedUsers.count,
+    monthlyUsers: monthlyCreatedUsers.count,
+
+    totalBusinesses: totalCreatedBusinesses.count,
+    todayBusinesses: todayCreatedBusinesses.count,
+    monthlyBusinesses: monthlyCreatedBusinesses.count,
+
+    dailyUserStats,
+    dailyBusinessStats,
+  });
+}
 
     // ============================
     // USERS
