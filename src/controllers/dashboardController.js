@@ -303,7 +303,9 @@ export const getAdminStats = async (req, res) => {
   try {
     console.log({ "req.query": req.query })
     console.log({ "req.user.id": req.user.id })
-    const admin_id = req?.query?.admin_id;
+    const admin_id = req?.query?.admin_id || req?.user.id;
+    const role = req?.user?.role;
+    console.log("req.user.role",req.user.role)
     const month = parseInt(req.query.month);
     const year = parseInt(req.query.year);
 
@@ -322,14 +324,14 @@ export const getAdminStats = async (req, res) => {
     // If admin_id is NOT provided, return stats for all sub-admins
 
     // If admin_id is NOT provided, return stats for ALL admins
-if (!admin_id) {
-  const currentMonth = hasMonthYear
-    ? month
-    : new Date().getMonth() + 1;
-
-  const currentYear = hasMonthYear
-    ? year
-    : new Date().getFullYear();
+    if (role === "admin" && !req.query.admin_id) {
+      const currentMonth = hasMonthYear
+        ? month
+        : new Date().getMonth() + 1;
+    
+      const currentYear = hasMonthYear
+        ? year
+        : new Date().getFullYear();
 
   // ============================
   // USERS
