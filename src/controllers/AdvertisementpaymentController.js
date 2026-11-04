@@ -352,7 +352,7 @@ export const requestRenewal = async (req, res) => {
           a.id,
           a.business_id,
           a.payment_status,
-          (a.end_date IS NOT NULL AND a.end_date < CURDATE()) AS is_expired
+      (a.end_date IS NOT NULL AND a.end_date <= CURDATE()) AS is_expired
        FROM advertisements a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = ? AND b.owner_id = ?`,
