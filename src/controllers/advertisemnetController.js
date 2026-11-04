@@ -162,7 +162,7 @@ export const list = wrap(async (req, res) => {
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 10));
   const offset = (page - 1) * limit;
 
-  const where = [];
+  const where = ["a.is_deleted != 1"];
   const params = [];
   if (search) {
     where.push("(a.title LIKE ? OR a.description LIKE ?)");
