@@ -15,6 +15,9 @@ import planRoutes from "./planRoutes.js";
 // import adminRoutes from "./adminRoutes.js";
 import dashboardRoutes from "./dashboardRoutes.js";
 import subadminRoutes from "./subadminRoutes.js";
+import advertisementRoutes from "./advertisementRoutes.js";
+import AdvertisementpaymentRoutes from "./AdvertisementpaymentRoutes.js"
+import adRequestRoutes from "./adRequestRoutes.js"
 
 const router = express.Router();
 
@@ -34,5 +37,8 @@ router.use("/payments", paymentRoutes);
 router.use("/plan", planRoutes);
 router.use("/dashboard",dashboardRoutes)
 router.use("/subadmin",subadminRoutes)
+router.use("/advertisements", advertisementRoutes);
+router.use("/AdPayment",AdvertisementpaymentRoutes);
+router.use("/AdRequest", adRequestRoutes);
 
 export default router;

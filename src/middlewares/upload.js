@@ -40,7 +40,37 @@ const multerUpload = multer({
   fileFilter,
 });
 
+const verifyFiles = async (files) => {
+  for (const file of files) {
+    const type = await fileType.fromFile(file.path);
+    if (!type || !allowedMime.includes(type.mime)) {
+      fs.unlinkSync(file.path);
+      return false;
+    }
+  }
+  return true;
+};
+
 export const upload = {
+  fields: (fieldsConfig) => {
+    const handler = multerUpload.fields(fieldsConfig);
+    return (req, res, next) => {
+      handler(req, res, async (err) => {
+        if (err) return res.status(400).json({ error: err.message });
+        try {
+          const all = Object.values(req.files || {}).flat();
+          if (!(await verifyFiles(all))) {
+            return res.status(400).json({ error: "Invalid or fake image file uploaded" });
+          }
+          next();
+        } catch (error) {
+          console.log(error);
+          return res.status(500).json({ error: "File type verification failed" });
+        }
+      });
+    };
+  },
+
   array: (fieldName, maxCount) => {
     const handler = multerUpload.array(fieldName, maxCount);
     return async (req, res, next) => {
