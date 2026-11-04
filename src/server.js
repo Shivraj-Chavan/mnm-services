@@ -33,6 +33,31 @@ app.use(express.json());
 app.use("/api", routes);
 // const swaggerFile = JSON.parse(fs.readFileSync("./src/swagger.json", "utf8"));
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
+// Serve advertisement images from uploads/ads
+app.use("/uploads/ads/:imageName", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
+  const imageName = path.basename(req.params.imageName);
+  const imagePath = path.join(__dirname, "../uploads/ads", imageName);
+
+  if (fs.existsSync(imagePath)) {
+    const ext = path.extname(imageName).toLowerCase();
+
+    if (ext === ".jpg" || ext === ".jpeg") {
+      res.setHeader("Content-Type", "image/jpeg");
+    } else if (ext === ".png") {
+      res.setHeader("Content-Type", "image/png");
+    } else if (ext === ".webp") {
+      res.setHeader("Content-Type", "image/webp");
+    }
+
+    return res.sendFile(imagePath);
+  }
+
+  console.log("Advertisement image not found:", imagePath);
+  return res.status(404).send("Advertisement image not found");
+});
 app.use("/uploads/:imageName", (req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -52,6 +77,7 @@ app.use("/uploads/:imageName", (req, res, next) => {
     res.status(404).send("Image not found");
   }
 });
+
 app.use("*", (req, res) => {
   res.status(404).json({ error: "Route not found" });
 })
