@@ -3,7 +3,7 @@
  *   create order -> user pays -> verify signature -> activate banner
  * Uses its own table (ad_payments); the plan `payments` table is untouched.
  *
- * .env: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET (optional, webhook only)
+ * .env: RAZORPAY_KEY_ID, RAZORPAY_SECRET, RAZORPAY_WEBHOOK_SECRET (optional, webhook only)
  */
 import crypto from "crypto";
 import Razorpay from "razorpay";
@@ -17,7 +17,7 @@ const getRazorpay = () => {
     const key_id = process.env.RAZORPAY_KEY_ID; 
     const key_secret = process.env.RAZORPAY_SECRET;
     if (!key_id || !key_secret) {
-      throw new Error("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET missing in .env");
+      throw new Error("RAZORPAY_KEY_ID / RAZORPAY_SECRET missing in .env");
     }
     razorpayInstance = new Razorpay({ key_id, key_secret });
   }
@@ -193,7 +193,7 @@ export const verifyPayment = async (req, res) => {
     if (!rows[0]) return res.status(404).json({ success: false, message: "Payment record not found" });
 
     const expected = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", process.env.RAZORPAY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
     if (!safeEqual(expected, razorpay_signature)) {
