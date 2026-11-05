@@ -18,11 +18,11 @@ const SIZE_TOLERANCE = 0.10;
 export const REQUIRED_SIZES = {
   homepage: {
     desktop: { recommended: [1024, 113], exact: true },   // left and right banner
-    mobile: { recommended: [1800, 600], exact: true },
+    mobile: { recommended: [800, 400], exact: true },
   },
   category: {
     desktop: { recommended: [1024, 113], exact: true },
-    mobile: { recommended: [1800, 600], exact: true },
+    mobile: { recommended: [800, 400], exact: true },
   },
 };
 
