@@ -20,10 +20,10 @@ export const generateAdInvoice = async ({
       doc.pipe(stream);
 
       // Header
-      doc.font("Helvetica-Bold").fontSize(22).text("MazhiNaviMumbai", { align: "center" });
+      doc.font("Helvetica-Bold").fontSize(22).text("MajhiNaviMumbai", { align: "center" });
       doc.moveDown(0.3);
       doc.font("Helvetica").fontSize(10)
-        .text("+91 9619363738 | info@majhinavimumbai.com", { align: "center" });
+        .text("+91 8693888693 | info@majhinavimumbai.com", { align: "center" });
       doc.moveDown(0.2);
       doc.text("GSTIN : 27AFPFS5307G1ZP");
       doc.moveDown(0.8);
@@ -78,9 +78,9 @@ export const generateAdInvoice = async ({
       doc.fillColor("black").moveDown(2).fontSize(10)
         .text("This is a computer generated invoice and does not require a signature.", { align: "center" });
       doc.moveDown(1).fontSize(9).fillColor("gray")
-        .text("Mazhimumbai, Mumbai, Maharashtra, India", { align: "center" })
-        .text("Email: info@mazhimumbai.com", { align: "center" })
-        .text("Phone: +91 9619363738", { align: "center" });
+        .text("MajhiNavimumbai, Navi Mumbai, Maharashtra, India", { align: "center" })
+        .text("Email: info@majhinavimumbai.com", { align: "center" })
+        .text("Phone: +91 8693888693", { align: "center" });
 
       doc.end();
       stream.on("finish", () => resolve(filePath));

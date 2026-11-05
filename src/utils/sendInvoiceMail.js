@@ -3,8 +3,8 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
     }
 });
 
@@ -14,7 +14,7 @@ export const sendInvoiceEmail = async ({
     invoicePath
 }) => {
     await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+        from: process.env.MAIL_USER,
         to,
         subject: "Payment Successful - Invoice",
         html: `
@@ -25,7 +25,7 @@ export const sendInvoiceEmail = async ({
             Your invoice is attached.
 
             Regards,<br>
-            'Mazhimumbai Team'
+            'MajhiNaviMumbai Team'
         `,
         attachments: [
             {
@@ -42,7 +42,7 @@ export const sendAdInvoiceEmail = async ({
     to, customerName, invoicePath, invoiceNo, adTitle, businessName, amount,
 }) => {
     await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+        from: process.env.MAIL_USER,
         to,
         subject: `Invoice ${invoiceNo} - Advertisement payment received`,
         html: `
@@ -51,7 +51,7 @@ export const sendAdInvoiceEmail = async ({
             "<b>${adTitle || "Banner"}</b>" (${businessName}).<br><br>
             Your invoice is attached.<br><br>
             Regards,<br>
-            Mazhimumbai Team
+            MajhiNaviMumbai Team
         `,
         attachments: [{ filename: `Invoice-${invoiceNo}.pdf`, path: invoicePath }],
     });
@@ -65,7 +65,7 @@ export const sendRenewalDecisionEmail = async ({
 }) => {
     const approved = decision === "approved";
     await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+        from: process.env.MAIL_USER,
         to,
         subject: approved
             ? "Your banner renewal is approved - please pay to go live"
@@ -76,11 +76,11 @@ export const sendRenewalDecisionEmail = async ({
                Period: ${esc(startDate)} to ${esc(endDate)}<br>
                Amount: Rs. ${esc(price)}<br><br>
                Please open <b>My Business</b> and click <b>Pay now</b> to make it live.<br><br>
-               Regards,<br>Mazhimumbai Team`
+               Regards,<br>MajhiNavimumbai Team`
             : `Hi ${esc(customerName) || "there"},<br><br>
                Your renewal request for the banner "<b>${esc(adTitle)}</b>" was not approved.<br>
                ${reason ? `Reason: ${esc(reason)}<br>` : ""}<br>
                You can send a new request from <b>My Business</b>.<br><br>
-               Regards,<br>Mazhimumbai Team`,
+               Regards,<br>MajhiNaviMumbai Team`,
     });
 };
