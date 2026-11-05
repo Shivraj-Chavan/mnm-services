@@ -17,7 +17,8 @@ import dashboardRoutes from "./dashboardRoutes.js";
 import subadminRoutes from "./subadminRoutes.js";
 import advertisementRoutes from "./advertisementRoutes.js";
 import AdvertisementpaymentRoutes from "./AdvertisementpaymentRoutes.js"
-import adRequestRoutes from "./adRequestRoutes.js"
+import adRequestRoutes from "./adRequestRoutes.js";
+import advertisementInvoiceRoutes from "./advertisementInvoiceRoutes.js";
 
 const router = express.Router();
 
@@ -40,5 +41,6 @@ router.use("/subadmin",subadminRoutes)
 router.use("/advertisements", advertisementRoutes);
 router.use("/AdPayment",AdvertisementpaymentRoutes);
 router.use("/AdRequest", adRequestRoutes);
+router.use("/advertisement-invoices", advertisementInvoiceRoutes);
 
 export default router;

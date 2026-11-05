@@ -20,7 +20,7 @@ export const generateAdInvoice = async ({
       doc.pipe(stream);
 
       // Header
-      doc.font("Helvetica-Bold").fontSize(22).text("MazhiMumbai", { align: "center" });
+      doc.font("Helvetica-Bold").fontSize(22).text("MazhiNaviMumbai", { align: "center" });
       doc.moveDown(0.3);
       doc.font("Helvetica").fontSize(10)
         .text("+91 9619363738 | info@majhinavimumbai.com", { align: "center" });
