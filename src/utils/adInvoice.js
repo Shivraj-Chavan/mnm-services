@@ -94,8 +94,9 @@ import pool from "../config/db.js";
 import path from "path";
 import { generateAdInvoice } from "./generateAdInvoice.js";
 import { sendAdInvoiceEmail } from "./sendInvoiceMail.js";
+import fs from "fs";
 
-const GST_RATE = 18; // Confirm your actual GST treatment with your accountant.
+const GST_RATE = 18; 
 
 export const createAndSendAdInvoice = async (paymentRowId) => {
   console.log("\n========== CREATE AD INVOICE START ==========");
@@ -215,6 +216,9 @@ export const createAndSendAdInvoice = async (paymentRowId) => {
         paymentId: row.razorpay_payment_id,
         paymentDate: row.paid_at || new Date(),
       });
+
+      console.log("[ad invoice] PDF returned:", filePath);
+console.log("[ad invoice] PDF exists:", fs.existsSync(filePath));
 
       fileName = path.basename(filePath);
       console.log("[ad invoice] PDF generated:", filePath);
