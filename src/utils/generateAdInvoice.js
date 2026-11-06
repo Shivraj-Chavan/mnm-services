@@ -12,8 +12,14 @@ export const generateAdInvoice = async ({
   new Promise((resolve, reject) => {
     try {
       const dir = path.join(process.cwd(), "uploads", "invoices");
+      console.log("========== INVOICE PDF GENERATOR ==========");
+console.log("Current working directory:", process.cwd());
+console.log("Invoice directory:", dir);
+console.log("Directory exists before:", fs.existsSync(dir));
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      console.log("Directory exists after:", fs.existsSync(dir));
       const filePath = path.join(dir, `Invoice-${invoiceNo}.pdf`);
+      console.log("Invoice PDF file path:", filePath);
 
       const doc = new PDFDocument({ size: "A4", margin: 50 });
       const stream = fs.createWriteStream(filePath);
